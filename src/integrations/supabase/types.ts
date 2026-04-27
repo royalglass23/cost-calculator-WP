@@ -14,7 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lead_answers: {
+        Row: {
+          answers: Json
+          breakdown: Json
+          created_at: string
+          id: string
+          lead_id: string
+          pricing_snapshot: Json
+        }
+        Insert: {
+          answers: Json
+          breakdown: Json
+          created_at?: string
+          id?: string
+          lead_id: string
+          pricing_snapshot: Json
+        }
+        Update: {
+          answers?: Json
+          breakdown?: Json
+          created_at?: string
+          id?: string
+          lead_id?: string
+          pricing_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_answers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          consent: boolean
+          created_at: string
+          email: string
+          estimate_high: number
+          estimate_low: number
+          estimate_mid: number
+          full_name: string
+          id: string
+          ip_hash: string | null
+          marketing_opt_in: boolean
+          needs_review: boolean
+          phone: string
+          pricing_version_id: string
+          review_reasons: Json
+          role: string
+          source: string | null
+          status: string
+          suburb: string
+          timeframe: string
+          user_agent: string | null
+          utm: Json | null
+        }
+        Insert: {
+          consent: boolean
+          created_at?: string
+          email: string
+          estimate_high: number
+          estimate_low: number
+          estimate_mid: number
+          full_name: string
+          id?: string
+          ip_hash?: string | null
+          marketing_opt_in?: boolean
+          needs_review?: boolean
+          phone: string
+          pricing_version_id: string
+          review_reasons?: Json
+          role: string
+          source?: string | null
+          status?: string
+          suburb: string
+          timeframe: string
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Update: {
+          consent?: boolean
+          created_at?: string
+          email?: string
+          estimate_high?: number
+          estimate_low?: number
+          estimate_mid?: number
+          full_name?: string
+          id?: string
+          ip_hash?: string | null
+          marketing_opt_in?: boolean
+          needs_review?: boolean
+          phone?: string
+          pricing_version_id?: string
+          review_reasons?: Json
+          role?: string
+          source?: string | null
+          status?: string
+          suburb?: string
+          timeframe?: string
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_pricing_version_id_fkey"
+            columns: ["pricing_version_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          rules: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          rules: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          rules?: Json
+          version?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
