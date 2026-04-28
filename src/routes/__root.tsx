@@ -29,14 +29,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Royal Glass — Balustrade & Pool Fence Estimate" },
+      { name: "description", content: "Get an indicative estimate for a frameless glass balustrade or pool fence from Royal Glass, Auckland's frameless glass experts." },
+      { name: "author", content: "Royal Glass Limited" },
+      { property: "og:title", content: "Royal Glass — Balustrade & Pool Fence Estimate" },
+      { property: "og:description", content: "Get an indicative estimate for your frameless glass balustrade or pool fence." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@RoyalGlassNZ" },
     ],
     links: [
       {
