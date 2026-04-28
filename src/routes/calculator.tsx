@@ -1,6 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SiteHeader } from "@/components/SiteHeader";
 import { StepShell } from "@/components/calculator/StepShell";
 import { VisualChoice } from "@/components/calculator/VisualChoice";
 import { SliderField } from "@/components/calculator/SliderField";
@@ -13,7 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { AlertTriangle, ShieldCheck, Phone, Mail, ArrowRight, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { submitLead, type SubmitResponse } from "@/lib/calculator/submit.functions";
+import { submitLead } from "@/lib/calculator/submit";
+import { calculatePricing, type PricingResult } from "@/lib/calculator/pricing";
+import { defaultPricingRules } from "@/lib/calculator/calculator.config";
 import {
   projectTypeOptions,
   heightOptions,
@@ -32,16 +32,6 @@ import {
   timeframeOptions,
 } from "@/lib/calculator/wizardData";
 import type { Answers, Lead } from "@/lib/calculator/schema";
-
-export const Route = createFileRoute("/calculator")({
-  head: () => ({
-    meta: [
-      { title: "Calculator — Royal Glass Balustrade Estimate" },
-      { name: "description", content: "Get an indicative estimate for your frameless glass balustrade or pool fence." },
-    ],
-  }),
-  component: CalculatorPage,
-});
 
 const TOTAL_STEPS = 7;
 
@@ -168,12 +158,12 @@ function NZAddressInput({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function CalculatorPage() {
+export function CalculatorPage() {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Answers>(defaultAnswers);
   const [lead, setLead] = useState<Lead>(defaultLead);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<SubmitResponse | null>(null);
+  const [result, setResult] = useState<PricingResult | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
 
@@ -202,15 +192,35 @@ function CalculatorPage() {
   async function handleSubmit() {
     setLoading(true);
     try {
+      const pricing = calculatePricing(answers, defaultPricingRules);
+
       const res = await submitLead({
-        data: {
-          lead,
-          answers,
-          source: "web_calculator",
+        full_name: lead.fullName,
+        email: lead.email,
+        phone: lead.phone,
+        role: lead.role,
+        suburb: lead.suburb,
+        timeframe: lead.timeframe,
+        estimate_low: pricing.estimateLow,
+        estimate_mid: pricing.estimateMid,
+        estimate_high: pricing.estimateHigh,
+        needs_review: pricing.needsReview,
+        review_reasons: pricing.reviewReasons,
+        answers: answers as Record<string, unknown>,
+        pricing_breakdown: {
+          lines: pricing.lines,
+          subtotal: pricing.subtotal,
+          rangePercent: pricing.rangePercent,
         },
+        honeypot: lead.website || undefined,
       });
-      setResult(res);
-      setStep(TOTAL_STEPS + 1);
+
+      if (res.ok) {
+        setResult(pricing);
+        setStep(TOTAL_STEPS + 1);
+      } else {
+        toast.error(res.message || "Submission failed. Please try again.");
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       toast.error(msg);
@@ -221,7 +231,6 @@ function CalculatorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/40">
-      <SiteHeader />
       <Toaster richColors position="top-center" />
       <main className="mx-auto max-w-4xl px-4 py-10">
         {result && step > TOTAL_STEPS ? (
@@ -502,8 +511,7 @@ function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail
   );
 }
 
-function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: () => void }) {
-  const { estimate, breakdown } = result;
+function ResultView({ result, onRestart }: { result: PricingResult; onRestart: () => void }) {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border bg-card p-8 shadow-[var(--shadow-elevated)]">
@@ -511,7 +519,7 @@ function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: 
           <ShieldCheck className="h-4 w-4 text-primary" /> Indicative estimate
         </div>
         <h1 className="mt-3 font-display text-3xl text-foreground sm:text-4xl">
-          {fmt(estimate.low)} – {fmt(estimate.high)}
+          {fmt(result.estimateLow)} – {fmt(result.estimateHigh)}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           A starting range based on your answers. Final pricing is confirmed by Royal Glass after a site visit.
@@ -528,7 +536,7 @@ function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: 
         </div>
       </div>
 
-      {breakdown.needsReview && (
+      {result.needsReview && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 text-warning-foreground" />
@@ -538,7 +546,7 @@ function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: 
                 Some details mean we'd rather check before confirming pricing:
               </p>
               <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-warning-foreground/90">
-                {breakdown.reviewReasons.map((r) => (
+                {result.reviewReasons.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>
@@ -551,7 +559,7 @@ function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: 
         <div className="rounded-xl border bg-card p-6">
           <h3 className="font-display text-lg">Major cost factors</h3>
           <ul className="mt-4 divide-y text-sm">
-            {breakdown.lines.map((l) => (
+            {result.lines.map((l) => (
               <li key={l.label} className="flex items-start justify-between gap-3 py-2.5">
                 <div>
                   <div>{l.label}</div>
@@ -565,12 +573,12 @@ function ResultView({ result, onRestart }: { result: SubmitResponse; onRestart: 
         <div className="rounded-xl border bg-card p-6">
           <h3 className="font-display text-lg">What this estimate assumes</h3>
           <ul className="mt-4 list-inside list-disc space-y-2 text-sm text-muted-foreground">
-            {breakdown.assumptions.map((a) => (
+            {result.assumptions.map((a) => (
               <li key={a}>{a}</li>
             ))}
           </ul>
           <p className="mt-4 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground">
-            {breakdown.disclaimer}
+            {result.disclaimer}
           </p>
         </div>
       </div>

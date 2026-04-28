@@ -1,0 +1,82 @@
+import type { PricingRules } from './pricing'
+
+export const defaultPricingRules: PricingRules = {
+  currency: 'NZD',
+  rangePercent: 0.15,
+  minLengthMetres: 5,
+  ratePerMetre: 380,
+  heightSurchargePerMetreOver1m: 50,
+  cornerSurcharge: 350,
+  gateUnitPrice: 950,
+  glassTypeSurchargePerMetre: {
+    toughened: 0,
+    laminated: 90,
+    sgp_laminated: 180,
+  },
+  glassClaritySurchargePerMetre: {
+    standard: 0,
+    low_iron: 80,
+    tinted: 50,
+  },
+  glassShapeSurchargePerMetre: {
+    straight: 0,
+    curved: 280,
+  },
+  glassThicknessSurchargePerMetre: {
+    '10mm': 0,
+    '12mm': 0,
+    '13.52mm': 80,
+    '15mm': 120,
+  },
+  fixingMethodSurchargePerMetre: {
+    spigots: 0,
+    standoff: 90,
+    channel: 150,
+  },
+  handrailSurchargePerMetre: {
+    none: 0,
+    stainless: 130,
+    timber: 160,
+    glass: 220,
+  },
+  hardwareFinishSurchargePerMetre: {
+    standard: 0,
+    matte_black: 85,
+    brushed: 65,
+    brass: 130,
+    custom: 200,
+  },
+  hardwareFinishMinimumSurcharge: 500,
+  substrateSurchargePerMetre: {
+    timber: 0,
+    concrete: 40,
+    tiles: 50,
+    steel: 60,
+  },
+  reviewTriggers: {
+    scaffold: true,
+    highrise: true,
+    cbd: true,
+    customHeight: true,
+    sgp: true,
+    curved: true,
+    manyGates: 4,
+    manyCorners: 8,
+    longCarryDistance: 50,
+    unknownSubstrate: false,
+    deterioratedSubstrate: true,
+    notSureAnswers: true,
+  },
+  assumptions: [
+    'Standard residential site with vehicle access',
+    'New or good condition substrate',
+    'Standard Auckland region (no island deliveries)',
+    'Frameless toughened or laminated glass panels',
+    'Works at ground level or first floor',
+    'No council consent or engineering required',
+    'Price includes supply and installation',
+    'GST is not included in this estimate',
+  ],
+  customerDisclaimer:
+    'This is an indicative estimate only. Final pricing is confirmed by Royal Glass after a site visit and compliance check. Prices exclude GST.',
+}
