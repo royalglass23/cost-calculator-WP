@@ -99,12 +99,12 @@ export const submitLead = createServerFn({ method: "POST" })
       throw new Error("Could not save your enquiry. Please try again or call Royal Glass.");
     }
 
-    const { error: ansErr } = await supabaseAdmin.from("lead_answers").insert([
+    const { error: ansErr } = await (supabaseAdmin.from("lead_answers") as any).insert([
       {
         lead_id: lead.id,
-        answers: data.answers as unknown as Record<string, unknown>,
-        pricing_snapshot: rules as unknown as Record<string, unknown>,
-        breakdown: breakdown as unknown as Record<string, unknown>,
+        answers: data.answers,
+        pricing_snapshot: rules,
+        breakdown,
       },
     ]);
     if (ansErr) {
