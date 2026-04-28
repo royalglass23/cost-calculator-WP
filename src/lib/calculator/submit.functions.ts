@@ -99,12 +99,14 @@ export const submitLead = createServerFn({ method: "POST" })
       throw new Error("Could not save your enquiry. Please try again or call Royal Glass.");
     }
 
-    const { error: ansErr } = await supabaseAdmin.from("lead_answers").insert({
-      lead_id: lead.id,
-      answers: data.answers,
-      pricing_snapshot: rules,
-      breakdown,
-    });
+    const { error: ansErr } = await supabaseAdmin.from("lead_answers").insert([
+      {
+        lead_id: lead.id,
+        answers: data.answers as unknown as Record<string, unknown>,
+        pricing_snapshot: rules as unknown as Record<string, unknown>,
+        breakdown: breakdown as unknown as Record<string, unknown>,
+      },
+    ]);
     if (ansErr) {
       console.error("Lead answers insert failed:", ansErr);
       // Lead is saved — don't fail the user, but log it.
