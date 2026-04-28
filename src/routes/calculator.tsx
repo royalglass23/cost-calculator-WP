@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StepShell } from "@/components/calculator/StepShell";
 import { VisualChoice } from "@/components/calculator/VisualChoice";
@@ -84,12 +84,102 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD", maximumFractionDigits: 0 }).format(n);
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+}
+
+// Accepts NZ mobile (02x), landlines (03/04/06/07/09), 0800/0900, and +64 variants.
+// Strips spaces, hyphens, dots and parentheses before checking.
+function isValidNZPhone(raw: string): boolean {
+  const digits = raw.replace(/[\s\-().]/g, "");
+  return /^(\+64|0)(2\d{7,9}|[3-9]\d{7}|800\d{6,7}|900\d{6,7})$/.test(digits);
+}
+
+// Address autocomplete backed by Nominatim (OpenStreetMap), filtered to NZ.
+function NZAddressInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [query, setQuery] = useState(value);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    setQuery(v);
+    onChange(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (v.length < 3) { setSuggestions([]); setOpen(false); return; }
+    timerRef.current = setTimeout(async () => {
+      setFetching(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v)}&countrycodes=nz&format=json&limit=6&addressdetails=0`,
+          { headers: { "Accept-Language": "en-NZ,en" } },
+        );
+        const data: Array<{ display_name: string }> = await res.json();
+        const names = data.map((r) => r.display_name);
+        setSuggestions(names);
+        setOpen(names.length > 0);
+      } catch {
+        setSuggestions([]);
+        setOpen(false);
+      } finally {
+        setFetching(false);
+      }
+    }, 350);
+  }
+
+  function select(name: string) {
+    const clean = name.replace(/,\s*New Zealand$/, "");
+    setQuery(clean);
+    onChange(clean);
+    setSuggestions([]);
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative">
+      <Input
+        value={query}
+        onChange={handleChange}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Start typing an address or suburb…"
+        maxLength={120}
+        autoComplete="off"
+      />
+      {fetching && (
+        <div className="absolute right-3 top-3 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      )}
+      {open && suggestions.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+          {suggestions.map((s, i) => (
+            <li
+              key={i}
+              className="cursor-pointer truncate px-3 py-2 text-sm hover:bg-accent"
+              title={s}
+              onMouseDown={() => select(s)}
+            >
+              {s.replace(/,\s*New Zealand$/, "")}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function CalculatorPage() {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState<Answers>(defaultAnswers);
   const [lead, setLead] = useState<Lead>(defaultLead);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SubmitResponse | null>(null);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   const showHandrail = answers.projectType === "stairs" || answers.projectType === "balustrade_balcony";
 
@@ -102,8 +192,8 @@ function CalculatorPage() {
   const leadValid = useMemo(
     () =>
       lead.fullName.trim().length >= 2 &&
-      /\S+@\S+\.\S+/.test(lead.email) &&
-      lead.phone.trim().length >= 6 &&
+      isValidEmail(lead.email) &&
+      isValidNZPhone(lead.phone) &&
       lead.suburb.trim().length >= 2 &&
       lead.consent === true,
     [lead],
@@ -148,6 +238,10 @@ function CalculatorPage() {
             leadValid={leadValid}
             loading={loading}
             onSubmit={handleSubmit}
+            emailTouched={emailTouched}
+            phoneTouched={phoneTouched}
+            setEmailTouched={setEmailTouched}
+            setPhoneTouched={setPhoneTouched}
           />
         )}
       </main>
@@ -166,9 +260,13 @@ interface WizardProps {
   leadValid: boolean;
   loading: boolean;
   onSubmit: () => void;
+  emailTouched: boolean;
+  phoneTouched: boolean;
+  setEmailTouched: (v: boolean) => void;
+  setPhoneTouched: (v: boolean) => void;
 }
 
-function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail, leadValid, loading, onSubmit }: WizardProps) {
+function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail, leadValid, loading, onSubmit, emailTouched, phoneTouched, setEmailTouched, setPhoneTouched }: WizardProps) {
   const back = step > 1 ? () => setStep(step - 1) : undefined;
   const next = () => setStep(step + 1);
 
@@ -305,6 +403,9 @@ function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail
   }
 
   // Step 7 — Lead form
+  const emailError = emailTouched && lead.email.length > 0 && !isValidEmail(lead.email);
+  const phoneError = phoneTouched && lead.phone.length > 0 && !isValidNZPhone(lead.phone);
+
   return (
     <StepShell
       step={7}
@@ -324,11 +425,34 @@ function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail
         </div>
         <div>
           <Label htmlFor="email">Email *</Label>
-          <Input id="email" type="email" value={lead.email} onChange={(e) => updateLead("email", e.target.value)} maxLength={255} />
+          <Input
+            id="email"
+            type="email"
+            value={lead.email}
+            onChange={(e) => updateLead("email", e.target.value)}
+            onBlur={() => setEmailTouched(true)}
+            maxLength={255}
+            className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
+          />
+          {emailError && (
+            <p className="mt-1 text-xs text-destructive">Please enter a valid email address.</p>
+          )}
         </div>
         <div>
           <Label htmlFor="phone">Phone *</Label>
-          <Input id="phone" type="tel" value={lead.phone} onChange={(e) => updateLead("phone", e.target.value)} maxLength={40} />
+          <Input
+            id="phone"
+            type="tel"
+            value={lead.phone}
+            onChange={(e) => updateLead("phone", e.target.value)}
+            onBlur={() => setPhoneTouched(true)}
+            maxLength={40}
+            placeholder="e.g. 021 123 4567"
+            className={phoneError ? "border-destructive focus-visible:ring-destructive" : ""}
+          />
+          {phoneError && (
+            <p className="mt-1 text-xs text-destructive">Please enter a valid NZ phone number (e.g. 021 123 4567 or 09 123 4567).</p>
+          )}
         </div>
         <div>
           <Label className="mb-2 block">I'm a... *</Label>
@@ -339,8 +463,8 @@ function Wizard({ step, answers, lead, update, updateLead, setStep, showHandrail
           <VisualChoice options={timeframeOptions} value={lead.timeframe} onChange={(v) => updateLead("timeframe", v)} columns={2} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="suburb">Project suburb *</Label>
-          <Input id="suburb" value={lead.suburb} onChange={(e) => updateLead("suburb", e.target.value)} maxLength={120} placeholder="e.g. Remuera" />
+          <Label htmlFor="suburb" className="mb-2 block">Project address / suburb *</Label>
+          <NZAddressInput value={lead.suburb} onChange={(v) => updateLead("suburb", v)} />
         </div>
         {/* Honeypot — hidden from real users, must stay empty */}
         <div className="hidden" aria-hidden="true">
