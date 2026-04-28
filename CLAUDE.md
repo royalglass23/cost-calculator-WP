@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> For setup, deployment, pricing updates, and troubleshooting see **[RUNBOOK.md](./RUNBOOK.md)**.
+
 ## Commands
 
 ```bash
@@ -57,6 +59,13 @@ Pricing multipliers, thresholds, manual-review triggers, and disclaimer text all
 - **Honeypot**: `website` field in lead form must be empty — bots that fill it are silently rejected.
 - **No raw IPs stored**: duplicate detection uses a coarse hash.
 - **Service role key** is server-only; never expose it to the client bundle.
+
+### Supabase notes
+
+- `supabase/config.toml` contains `project_id` — update this when switching Supabase projects so the CLI targets the right one.
+- The service role key bypasses RLS. All server functions use this — it must never reach the client bundle.
+- Schema is managed via `supabase/migrations/`. Run `npx supabase db push` after adding a new migration file.
+- The `pricing_versions` table must have exactly one row with `is_active = true` or every submit will fail. See RUNBOOK.md for the seed SQL.
 
 ### Styling conventions
 
