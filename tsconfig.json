@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js", "delete/routes/pricing.ts", "delete/routes/schema.ts", "delete/routes/submit.ts", "delete/routes/utils.ts", "delete/routes/wizardData.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

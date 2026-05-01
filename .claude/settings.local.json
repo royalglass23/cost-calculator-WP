@@ -8,7 +8,12 @@
       "Bash(ls dist/*.jpg)",
       "Bash(cp dist/*.jpg wordpress-plugin/rg-calculator/assets/)",
       "Bash(cp dist/rg-calculator.js wordpress-plugin/rg-calculator/assets/)",
-      "Bash(cp dist/rg-calculator.css wordpress-plugin/rg-calculator/assets/)"
+      "Bash(cp dist/rg-calculator.css wordpress-plugin/rg-calculator/assets/)",
+      "Bash(ls src/routes/)",
+      "Bash(ls src/components/calculator/)",
+      "Bash(ls src/components/ui/)",
+      "Bash(ls src/styles.css)",
+      "Bash(ls components.json)"
     ]
   }
 }

@@ -14,11 +14,23 @@ const CONSULTATION_CHECKS: Array<{
   },
   {
     condition: (a) => a.height === 'not_sure',
-    reason: 'Height not confirmed',
+    reason: 'Height not confirmed — estimated at standard 1m',
   },
   {
     condition: (a) => a.height === 'custom',
-    reason: 'Custom height requested',
+    reason: 'Custom height — final price may vary from this estimate',
+  },
+  {
+    condition: (a) => a.fixingMethod === 'not_sure',
+    reason: 'Fixing method to be confirmed on site',
+  },
+  {
+    condition: (a) => a.hardwareFinish === 'not_sure',
+    reason: 'Hardware finish to be confirmed — estimated at standard chrome',
+  },
+  {
+    condition: (a) => a.hardwareFinish === 'custom',
+    reason: 'Custom hardware finish — pricing may vary',
   },
 ];
 

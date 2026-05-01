@@ -7,6 +7,7 @@ declare const rgCalculatorConfig: {
   nonce: string;
   googleMapsKey: string;
   turnstileSiteKey: string;
+  assetsUrl: string;
 };
 
 export function usePricing(): { pricing: PricingConfig; loading: boolean } {

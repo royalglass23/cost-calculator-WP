@@ -87,6 +87,7 @@ function rg_calc_enqueue_assets() {
         'nonce'            => wp_create_nonce('wp_rest'),
         'googleMapsKey'    => defined('RG_GOOGLE_MAPS_KEY')    ? RG_GOOGLE_MAPS_KEY    : '',
         'turnstileSiteKey' => defined('RG_TURNSTILE_SITE_KEY') ? RG_TURNSTILE_SITE_KEY : '',
+        'assetsUrl'        => RG_CALC_URL . 'assets/',
     ]);
 }
 

@@ -63,52 +63,55 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
       <div style={{
         background: 'linear-gradient(135deg, #173755 0%, #1a3c5e 60%, #244a70 100%)',
         borderRadius: '18px', padding: '34px 24px', textAlign: 'center',
-        marginBottom: '24px', color: 'white',
+        marginBottom: estimate.consultationReasons.length > 0 ? '0' : '24px', color: 'white',
         boxShadow: '0 14px 34px rgba(26,60,94,0.26)',
+        borderBottomLeftRadius: estimate.consultationReasons.length > 0 ? '0' : '18px',
+        borderBottomRightRadius: estimate.consultationReasons.length > 0 ? '0' : '18px',
       }}>
         <p style={{ fontSize: '13px', color: '#93c5fd', marginTop: 0, marginBottom: '8px', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>
           Your indicative estimate
         </p>
-        {!estimate.needsConsultation ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '12px 0' }}>
-              <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.low)}</span>
-              <span style={{ fontSize: '24px', color: '#93c5fd' }}>–</span>
-              <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.high)}</span>
-            </div>
-            <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0 }}>
-              Excluding GST · Based on {estimate.effectiveLength}m effective length
-            </p>
-          </>
-        ) : (
-          <>
-            <p style={{ fontSize: '20px', fontWeight: 600, margin: '12px 0' }}>Pricing on enquiry</p>
-            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px', marginTop: '12px', textAlign: 'left' }}>
-              <p style={{ fontSize: '13px', color: '#bfdbfe', marginTop: 0, marginBottom: '6px', fontWeight: 600 }}>Items needing a conversation:</p>
-              {estimate.consultationReasons.map(r => (
-                <p key={r} style={{ fontSize: '12px', color: '#93c5fd', margin: '0 0 2px 0' }}>• {r}</p>
-              ))}
-            </div>
-          </>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '12px 0' }}>
+          <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.low)}</span>
+          <span style={{ fontSize: '24px', color: '#93c5fd' }}>–</span>
+          <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.high)}</span>
+        </div>
+        <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0 }}>
+          Excluding GST · Based on {estimate.effectiveLength}m effective length
+        </p>
       </div>
 
-      {/* Breakdown */}
-      {!estimate.needsConsultation && (
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937', marginTop: 0, marginBottom: '16px' }}>Estimate breakdown</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
-            <Row label={`${estimate.effectiveLength}m × base rate`} value={formatNZD(estimate.breakdown.base)} />
-            {estimate.breakdown.gates > 0 && <Row label={`${answers.gates} gate${answers.gates !== 1 ? 's' : ''}`} value={formatNZD(estimate.breakdown.gates)} />}
-            {estimate.breakdown.corners > 0 && <Row label={`${answers.corners} corner${answers.corners !== 1 ? 's' : ''}`} value={formatNZD(estimate.breakdown.corners)} />}
-            {estimate.breakdown.hardwareSurcharge > 0 && <Row label="Hardware finish surcharge" value={formatNZD(estimate.breakdown.hardwareSurcharge)} />}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#111' }}>
-              <span>Estimated total (excl. GST)</span>
-              <span>{formatNZD(estimate.subtotal)}</span>
-            </div>
-          </div>
+      {/* Concerns — shown only when some details need confirming */}
+      {estimate.consultationReasons.length > 0 && (
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fde68a',
+          borderTop: 'none',
+          borderBottomLeftRadius: '18px', borderBottomRightRadius: '18px',
+          padding: '14px 20px', marginBottom: '24px',
+        }}>
+          <p style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginTop: 0, marginBottom: '6px' }}>
+            A few things we'll confirm at the site visit:
+          </p>
+          {estimate.consultationReasons.map(r => (
+            <p key={r} style={{ fontSize: '12px', color: '#b45309', margin: '0 0 2px 0' }}>· {r}</p>
+          ))}
         </div>
       )}
+
+      {/* Breakdown */}
+      <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937', marginTop: 0, marginBottom: '16px' }}>Estimate breakdown</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
+          <Row label={`${estimate.effectiveLength}m × base rate`} value={formatNZD(estimate.breakdown.base)} />
+          {estimate.breakdown.gates > 0 && <Row label={`${answers.gates} gate${answers.gates !== 1 ? 's' : ''}`} value={formatNZD(estimate.breakdown.gates)} />}
+          {estimate.breakdown.corners > 0 && <Row label={`${answers.corners} corner${answers.corners !== 1 ? 's' : ''}`} value={formatNZD(estimate.breakdown.corners)} />}
+          {estimate.breakdown.hardwareSurcharge > 0 && <Row label="Hardware finish surcharge" value={formatNZD(estimate.breakdown.hardwareSurcharge)} />}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#111' }}>
+            <span>Estimated total (excl. GST)</span>
+            <span>{formatNZD(estimate.subtotal)}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Project summary */}
       <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>

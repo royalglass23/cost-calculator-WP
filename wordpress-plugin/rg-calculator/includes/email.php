@@ -10,16 +10,14 @@ function rg_send_lead_email(int $lead_id, array $lead, array $answers, array $es
     $project_labels = ['balustrade' => 'Glass Balustrade', 'pool_fence' => 'Glass Pool Fence'];
     $project        = $project_labels[$a['projectType']] ?? $a['projectType'];
     $name           = "{$l['firstName']} {$l['lastName']}";
-    $est_range      = $e['needsConsultation']
-        ? 'Pricing on enquiry (consultation needed)'
-        : '$' . number_format($e['low'], 0) . ' – $' . number_format($e['high'], 0) . ' excl. GST';
+    $est_range = '$' . number_format($e['low'], 0) . ' – $' . number_format($e['high'], 0) . ' excl. GST';
 
     $subject = "New RG Lead #{$lead_id} — {$project} — {$name}";
 
     $consult_block = '';
-    if ($e['needsConsultation'] && !empty($e['consultationReasons'])) {
-        $reasons = array_map(fn($r) => "  • {$r}", $e['consultationReasons']);
-        $consult_block = "\n⚠ NEEDS CONSULTATION:\n" . implode("\n", $reasons) . "\n";
+    if (!empty($e['consultationReasons'])) {
+        $reasons = array_map(fn($r) => "  · {$r}", $e['consultationReasons']);
+        $consult_block = "\nTo confirm at site visit:\n" . implode("\n", $reasons) . "\n";
     }
 
     $notes_block = $l['notes'] ? "\nNotes from customer:\n{$l['notes']}\n" : '';
@@ -75,15 +73,29 @@ function rg_send_estimate_email_to_customer(
     $project     = $project_map[$a['projectType']] ?? 'Glass Project';
     $length      = (int) $a['length'];
 
-    // ── Estimate band ──
-    if ($e['needsConsultation']) {
-        $est_html = '<p style="color:#ffffff;font-size:20px;font-weight:600;margin:0 0 4px 0;">We\'ll work this out with you</p>';
-        $est_sub  = 'A few details benefit from a quick conversation &mdash; our team will help';
-    } else {
-        $low      = '$' . number_format($e['low'],  0);
-        $high     = '$' . number_format($e['high'], 0);
-        $est_html = "<p style=\"color:#ffffff;font-size:38px;font-weight:700;margin:0 0 4px 0;letter-spacing:-0.02em;\">{$low} &ndash; {$high}</p>";
-        $est_sub  = "Excluding GST &middot; based on {$length}m effective length";
+    // ── Estimate band — always show the price ──
+    $low      = '$' . number_format($e['low'],  0);
+    $high     = '$' . number_format($e['high'], 0);
+    $est_html = "<p style=\"color:#ffffff;font-size:38px;font-weight:700;margin:0 0 4px 0;letter-spacing:-0.02em;\">{$low} &ndash; {$high}</p>";
+    $est_sub  = "Excluding GST &middot; based on {$length}m effective length";
+
+    // ── Amber bar — mirrors the on-screen concerns panel ──
+    $amber_block      = '';
+    $band_bottom_style = 'border-radius:14px;margin:0 0 30px 0;'; // no concerns — fully rounded + gap
+    if (!empty($e['consultationReasons'])) {
+        $band_bottom_style = 'border-radius:14px 14px 0 0;margin:0;'; // flat bottom, merges with amber bar
+        $reason_rows = '';
+        foreach ($e['consultationReasons'] as $reason) {
+            $r = esc_html($reason);
+            $reason_rows .= "<p style=\"font-size:13px;color:#b45309;margin:0 0 3px 0;\">&middot; {$r}</p>";
+        }
+        $amber_block = <<<AMBER
+  <!-- Amber concerns bar -->
+  <div style="background:#fffbeb;border:1px solid #fde68a;border-top:none;border-radius:0 0 14px 14px;padding:14px 20px;margin:0 0 30px 0;">
+    <p style="font-size:12px;font-weight:600;color:#92400e;margin:0 0 6px 0;">A few things we'll confirm at the site visit:</p>
+    {$reason_rows}
+  </div>
+AMBER;
     }
 
     // ── Project summary table ──
@@ -143,11 +155,12 @@ ROW;
   </p>
 
   <!-- Estimate band -->
-  <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 100%);border-radius:14px;padding:30px 28px;text-align:center;margin:0 0 30px 0;">
+  <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 100%);{$band_bottom_style}padding:30px 28px;text-align:center;">
     <p style="color:#7cb9f5;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 12px 0;">Your indicative estimate</p>
     {$est_html}
     <p style="color:#7cb9f5;font-size:13px;margin:6px 0 0 0;">{$est_sub}</p>
   </div>
+  {$amber_block}
 
   <p style="font-size:15px;color:#374151;line-height:1.75;margin:0 0 16px 0;">
     <strong style="color:#1a3c5e;">You don't need to worry about a thing from here.</strong>

@@ -11,24 +11,32 @@ export const DEFAULT_PRICING: PricingConfig = {
   rangeHighPercent: 120,
 };
 
-// Detect the plugin's asset URL from the script tag — works regardless of WP install path
+// Detect the plugin's asset URL.
+// Primary: use the URL injected by wp_localize_script — works even when caching
+// plugins rename or combine scripts.
+// Fallback: parse it from the script tag src, then hardcoded default.
 function getPluginBase(): string {
   if (typeof document === 'undefined') return '/wp-content/plugins/rg-calculator/assets/';
+
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Local Vite dev serves files from workspace root.
     return '/wordpress-plugin/rg-calculator/assets/';
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cfg = (window as any).rgCalculatorConfig;
+  if (cfg?.assetsUrl) return cfg.assetsUrl;
+
   const script = document.querySelector('script[src*="rg-calculator.js"]') as HTMLScriptElement | null;
   if (script?.src) {
     try {
       const url = new URL(script.src, window.location.origin);
-      const path = url.pathname;
-      const basePath = path.slice(0, path.lastIndexOf('/') + 1);
-      return `${url.origin}${basePath}`;
+      const base = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
+      return `${url.origin}${base}`;
     } catch {
-      // Fall through to default.
+      // fall through
     }
   }
+
   return '/wp-content/plugins/rg-calculator/assets/';
 }
 
