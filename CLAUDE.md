@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/estimate`, fill in a 7-step wizard describing their frameless glass balustrade project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), emails Royal Glass staff, and returns a success response.
+A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/estimate`, fill in a 7-step wizard describing their frameless glass balustrade or pool fence project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), emails Royal Glass staff asynchronously, and returns a success response.
 
 There is no Node.js server, no Cloudflare Workers, and no Supabase in the production path.
 
@@ -28,15 +28,14 @@ Full deploy sequence (build → copy assets → zip for WP upload):
 npm run build
 cp dist/rg-calculator.js  wordpress-plugin/rg-calculator/assets/
 cp dist/rg-calculator.css wordpress-plugin/rg-calculator/assets/
-cp dist/*.jpg             wordpress-plugin/rg-calculator/assets/
 ```
 
 ```powershell
 Compress-Archive -Path wordpress-plugin\rg-calculator -DestinationPath wordpress-plugin\rg-calculator.zip -Force
 ```
 
-The JS/CSS and all image assets must be copied — the JS bundle references images at
-`/wp-content/plugins/rg-calculator/assets/*.jpg` (set by `base` in `vite.config.ts`).
+> Do NOT run `cp dist/*.jpg` — images are not bundled by Vite. They live permanently in
+> `wordpress-plugin/rg-calculator/assets/` and must not be overwritten on each deploy.
 
 There are no automated tests.
 
@@ -46,83 +45,136 @@ There are no automated tests.
 
 ### React app (`src/`)
 
-Entry: `src/main.tsx` mounts on `#rg-calculator-root` using `react-router-dom` `createHashRouter`. Hash routing is required — WordPress owns the URL; React must not interfere.
+Entry: `src/main.tsx` mounts directly on `#rg-calculator-root`. No router is used at runtime — `main.tsx` imports `App` directly and calls `ReactDOM.createRoot`. Hash/TanStack routing artefacts from the original template have been removed.
 
 The `@` path alias resolves to `src/` (configured in `vite.config.ts`).
 
-The entire wizard lives in a single route component: `src/routes/calculator.tsx` (`CalculatorPage`). It holds all wizard state (`answers`, `lead`, `step`) in local React state. No global state library is used. `ResultView` (the step-8 result screen) is defined inline at the bottom of the same file, not in a separate component file.
+**Wizard flow (App.tsx):**
 
-`src/routes/__root.tsx` and `src/routes/index.tsx` are TanStack Router artefacts kept for compatibility — they do not affect runtime because `main.tsx` bypasses the TanStack `routeTree` entirely and routes directly to `CalculatorPage`.
+```
+steps 1-7 (wizard questions)
+  -> step 9 (LeadCapture form — contact details, address, notes, consent)
+    -> step 8 (ResultScreen — estimate + send-to-email)
+```
 
-**Wizard flow:**
+State lives entirely in `App.tsx` local React state. No global state library is used.
 
-1. `CalculatorPage` renders either `<Wizard>` (steps 1–7) or `<ResultView>` (step 8, shown after successful submission).
-2. `<Wizard>` is a big `if (step === N)` chain. Each branch renders `<StepShell>` wrapping either `<VisualChoice>`, `<SliderField>`, or plain inputs.
-3. On step 7 (contact details + consent), `handleSubmit` is called:
-   - Runs `calculatePricing(answers, defaultPricingRules)` client-side.
-   - Posts a flat `LeadPayload` (snake_case fields) to the WP REST endpoint.
-   - On success, stores the `PricingResult` in state and advances to the result screen.
-4. `<ResultView>` displays the estimate range and breakdown from the locally-computed `PricingResult` — the server response is only used for `ok`/`leadId`/`message`.
+**Step numbering:**
+| Step | Content |
+|---|---|
+| 1 | Project type (balustrade / pool fence) |
+| 2 | Length (slider) |
+| 3 | Height |
+| 4 | Corners |
+| 5 | Gates |
+| 6 | Fixing method |
+| 7 | Hardware finish |
+| 9 | Lead capture (contact form) |
+| 8 | Result screen |
 
 ### Pricing engine (`src/lib/calculator/`)
 
 | File | Role |
 |---|---|
-| `calculator.config.ts` | **Only place prices live.** Edit `defaultPricingRules` here to change pricing. |
-| `pricing.ts` | Pure function `calculatePricing(answers, rules) → PricingResult`. No side effects. Do not edit. |
-| `schema.ts` | Zod schemas for `Answers`, `Lead`, `SubmitInput`. Source of truth for field shapes. |
-| `wizardData.ts` | `VisualOption[]` arrays for every wizard step's choices, with labels and image imports. |
-| `submit.ts` | `submitLead(payload)` — plain `fetch` to `window.rgCalculator.endpoint` (set by `wp_localize_script`). Falls back to `/wp-json/royal-glass/v1/leads`. |
+| `config.ts` | **Only place prices live.** Edit `DEFAULT_PRICING` here to change pricing. Also exports `IMAGES` map and `getPluginBase()`. |
+| `engine.ts` | Pure function `calculateEstimate(answers, pricing) -> EstimateResult`. No side effects. |
+| `types.ts` | TypeScript interfaces for `WizardAnswers`, `LeadData`, `EstimateResult`, `PricingConfig`. |
 
-**`not_sure` fallback:** For any option where the user selects `not_sure`, `pricing.ts` substitutes the cheapest baseline (e.g. toughened glass, spigots, standard finish, 12mm). This means `not_sure` answers never inflate the estimate but do trigger `needsReview` (if ≥3 are `not_sure`). The `PricingResult.needsReview` flag is set when any `reviewTriggers` condition fires — it changes the message shown in `ResultView` but does not block submission.
+**Estimate always shows a price.** The engine computes a low/high range for every input combination. `consultationReasons` is a list of strings flagging unknowns or special cases (shown as an amber bar below the price on screen and in the customer email). These never block the price — they are informational only.
 
-**To change prices:** Edit only `calculator.config.ts`. Run `npm run build` and redeploy.
+**Current consultation triggers** (flags only — do not hide price):
+- Height `less_than_1m` — NZ Building Code compliance check required
+- Height `not_sure` — estimated at standard 1m
+- Height `custom` — final price may vary
+- Fixing method `not_sure` — to be confirmed on site
+- Hardware finish `not_sure` — estimated at standard chrome
+- Hardware finish `custom` — pricing may vary
 
-**To add a new wizard option** (e.g. a new glass type):
-1. Add the value to the relevant Zod enum in `schema.ts`.
-2. Add pricing for it in `calculator.config.ts`.
-3. Handle it in `pricing.ts` if the calculation logic changes.
-4. Add the `VisualOption` entry (with image) in `wizardData.ts`.
+**Hardware surcharge** applies only to `matte_black`, `brushed_chrome`, `brass` finishes.
 
-### UI components (`src/components/`)
+**To change prices:** Edit only `config.ts`. Run `npm run build` and redeploy.
 
-- `calculator/StepShell` — wraps every wizard step: progress bar, title, Back/Continue buttons.
-- `calculator/VisualChoice` — image-card grid for selecting from a list of `VisualOption` values.
-- `calculator/SliderField` — numeric slider with typed input.
-- `ui/` — shadcn/ui components (Radix primitives + Tailwind). Do not modify these directly.
+### Hooks (`src/hooks/`)
 
-### Styles (`src/styles.css`)
+| File | Role |
+|---|---|
+| `usePricing.ts` | Fetches live pricing from `GET /wp-json/royal-glass/v1/pricing` on mount. Falls back to `DEFAULT_PRICING` if the fetch fails or on local dev. Also exports `getConfig()` which returns `window.rgCalculatorConfig`. |
 
-Tailwind v4 with `@theme inline`. All semantic color tokens (primary, card, muted, etc.) are defined as `oklch` CSS custom properties in `:root` and `.dark`. To add a new semantic color, add it to both blocks and register it in `@theme inline`. The font family `font-display` is wired to a CSS variable.
+### UI components (`src/components/wizard/`)
+
+All components use **inline `style` props only** — no Tailwind classNames, no shadcn. This is intentional: WordPress themes output unlayered CSS which always overrides Tailwind's `@layer`-wrapped utilities. Inline styles are immune to the cascade.
+
+| File | Role |
+|---|---|
+| `WizardShell.tsx` | Outer chrome: progress bar, back/continue nav, step counter |
+| `steps/Steps.tsx` | All 7 wizard step components |
+| `steps/shared.tsx` | `SelectionCard`, `SliderInput`, `StepNote`, `ComplianceWarning`, `StepHero` |
+| `LeadCapture.tsx` | Contact form (name, email, phone, customer type, timeframe, address, notes, consent). Cloudflare Turnstile invisible CAPTCHA. |
+| `NZAddressAutocomplete.tsx` | Google Maps Places autocomplete wired to NZ addresses |
+| `ResultScreen.tsx` | Estimate display, breakdown, project summary, assumptions, next steps, send-to-email card |
+
+### Styles (`src/index.css`)
+
+Minimal CSS. Contains a scoped reset under `#rg-calculator-root` to neutralise WordPress theme defaults (margin, padding, list-style, box-sizing). All component styling is inline.
+
+### Image assets
+
+Images live at `wordpress-plugin/rg-calculator/assets/*.jpg` and are served from the WordPress plugin URL. The asset base URL is injected by WordPress as `window.rgCalculatorConfig.assetsUrl` via `wp_localize_script`. `config.ts` reads this first; the DOM script-tag query is a fallback only.
+
+Never rely on `base` in `vite.config.ts` for image URLs — images are not imported as modules, so Vite does not process them.
 
 ### WordPress plugin (`wordpress-plugin/rg-calculator/`)
 
 | File | Role |
 |---|---|
-| `rg-calculator.php` | Plugin bootstrap. Registers shortcode, enqueues assets, calls `wp_localize_script` to inject `window.rgCalculator`. |
-| `includes/database.php` | Creates `wp_rg_leads` table on activation. CRUD helpers: `rg_calc_insert_lead`, `rg_calc_update_lead_status`, `rg_calc_get_leads`. |
-| `includes/validation.php` | `rg_calc_validate_payload` (honeypot, required fields, numeric bounds, payload size). `rg_calc_sanitize_payload`. Rate limiting via WP transients (5/hour per IP). |
-| `includes/email.php` | `rg_calc_send_support_email` — sends plain-text email to `admin_email` via `wp_mail()`. |
-| `includes/api.php` | Registers `POST /wp-json/royal-glass/v1/leads` (public) and admin-only GET/status routes. Submit handler: validate → sanitize → insert → email → respond. |
-| `includes/admin-page.php` | WordPress admin menu page ("RG Leads") showing the leads table. |
+| `rg-calculator.php` | Plugin bootstrap. Registers shortcode, enqueues assets, calls `wp_localize_script` to inject `window.rgCalculatorConfig` (`restUrl`, `nonce`, `googleMapsKey`, `turnstileSiteKey`, `assetsUrl`). |
+| `includes/database.php` | Creates `wp_rg_leads` table on activation. CRUD helpers. |
+| `includes/validation.php` | `rg_validate_lead`, `rg_validate_answers`, `rg_sanitize_*`. |
+| `includes/api.php` | REST routes. Lead submit handler: time gate -> rate limit -> honeypot -> Turnstile -> validate -> save -> async email -> respond. Estimate email handler: rate limit -> validate -> async email -> respond. |
+| `includes/email.php` | `rg_send_lead_email()` — plain-text admin notification. `rg_send_estimate_email_to_customer()` — rich HTML email to customer (price always shown, amber bar if concerns exist). |
+| `includes/admin-pricing.php` | WordPress admin page for editing pricing values. |
+| `includes/admin-leads.php` | WordPress admin page listing submitted leads. |
 
-**Lead status flow:** `NEW` → `REVIEWED` → `ACCEPTED` or `REJECTED`. ServiceM8 integration is deliberately deferred to a later phase — do not add it to the public submit path.
+**Email sending is asynchronous.** Both the admin notification and the customer estimate email are dispatched via `add_action('shutdown', ...)` with `fastcgi_finish_request()`. The API responds to the browser immediately; emails send in the background after the response is flushed. This eliminates the 2-5 second `wp_mail()` delay the user would otherwise see.
+
+**Customer email is on-demand only.** No auto-confirmation is sent on form submit. The customer receives an email only when they explicitly click "Get this estimate in your inbox" on the result screen. This ensures the email always contains real pricing data (not stubs) and lets them redirect it to a builder, partner, or architect.
+
+**Turnstile enforcement** activates only when BOTH `RG_TURNSTILE_SITE_KEY` (frontend) AND `RG_TURNSTILE_SECRET` (backend) are defined in `wp-config.php`. A partial setup is treated as disabled.
+
+**Rate limits:**
+- Lead submissions: 10 per IP per hour (admin users bypass)
+- Estimate emails: 5 per IP per hour (admin users bypass)
+
+**Lead status flow:** `NEW` -> `REVIEWED` -> `ACCEPTED` or `REJECTED`.
+
+---
+
+## `wp-config.php` constants
+
+```php
+define('RG_GOOGLE_MAPS_KEY',   'AIza...');
+define('RG_TURNSTILE_SITE_KEY','0x...');
+define('RG_TURNSTILE_SECRET',  '0x...');
+define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz');
+```
 
 ---
 
 ## Non-negotiable constraints
 
-**Unused deps still in `package.json`:** `@supabase/supabase-js` and `@tanstack/react-query` are installed but not imported anywhere in the production code path. Do not use them for new features.
-
-Never reintroduce:
-- `@tanstack/react-start`, `@cloudflare/vite-plugin`, `@lovable.dev/vite-tanstack-config`, or any Cloudflare Worker config
-- Supabase in the V1 lead submission path
+**Never reintroduce:**
+- `@tanstack/react-start`, `@cloudflare/vite-plugin`, or any Cloudflare Worker config
+- Supabase in the lead submission path
 - n8n or any external webhook called during public form submission
 - Automatic ServiceM8 job creation from a public form submission
+- Tailwind `className` props in wizard components (use inline `style` instead)
+- An auto-confirmation email sent immediately on lead submit
 
-Never expose to the browser bundle:
-- ServiceM8 API keys, n8n webhook URLs, Supabase service-role keys, or any private automation credential
+**Never expose to the browser bundle:**
+- ServiceM8 API keys, n8n webhook URLs, Supabase service-role keys, or any private credential
 
-Server-side validation in `api.php` must never be skipped because frontend validation exists — both must run independently.
+**Server-side validation in `api.php` must never be skipped** because frontend validation exists — both run independently.
 
-Database save must complete before the email is sent. If the DB insert fails, return a 500; do not send an email for a lead that wasn't saved.
+**Database save must complete before email is scheduled.** If the DB insert fails, return a 500 and do not schedule the email.
+
+**Images are not bundled by Vite.** Do not import `.jpg` files as ES modules in wizard components. Reference them via the `IMAGES` map in `config.ts`, which resolves from `window.rgCalculatorConfig.assetsUrl`.
