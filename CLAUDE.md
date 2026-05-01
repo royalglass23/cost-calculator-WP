@@ -22,22 +22,21 @@ npm run lint         # ESLint
 npm run format       # Prettier
 ```
 
-After building, copy the entire dist output to the plugin before deploying:
+Full deploy sequence (build → copy assets → zip for WP upload):
 
 ```bash
+npm run build
 cp dist/rg-calculator.js  wordpress-plugin/rg-calculator/assets/
 cp dist/rg-calculator.css wordpress-plugin/rg-calculator/assets/
 cp dist/*.jpg             wordpress-plugin/rg-calculator/assets/
 ```
 
-The JS/CSS and all image assets must be copied — the JS bundle references images at
-`/wp-content/plugins/rg-calculator/assets/*.jpg` (set by `base` in `vite.config.ts`).
-
-Zip for WordPress upload:
-
 ```powershell
 Compress-Archive -Path wordpress-plugin\rg-calculator -DestinationPath wordpress-plugin\rg-calculator.zip -Force
 ```
+
+The JS/CSS and all image assets must be copied — the JS bundle references images at
+`/wp-content/plugins/rg-calculator/assets/*.jpg` (set by `base` in `vite.config.ts`).
 
 There are no automated tests.
 
@@ -49,7 +48,9 @@ There are no automated tests.
 
 Entry: `src/main.tsx` mounts on `#rg-calculator-root` using `react-router-dom` `createHashRouter`. Hash routing is required — WordPress owns the URL; React must not interfere.
 
-The entire wizard lives in a single route component: `src/routes/calculator.tsx` (`CalculatorPage`). It holds all wizard state (`answers`, `lead`, `step`) in local React state. No global state library is used.
+The `@` path alias resolves to `src/` (configured in `vite.config.ts`).
+
+The entire wizard lives in a single route component: `src/routes/calculator.tsx` (`CalculatorPage`). It holds all wizard state (`answers`, `lead`, `step`) in local React state. No global state library is used. `ResultView` (the step-8 result screen) is defined inline at the bottom of the same file, not in a separate component file.
 
 `src/routes/__root.tsx` and `src/routes/index.tsx` are TanStack Router artefacts kept for compatibility — they do not affect runtime because `main.tsx` bypasses the TanStack `routeTree` entirely and routes directly to `CalculatorPage`.
 
@@ -72,6 +73,8 @@ The entire wizard lives in a single route component: `src/routes/calculator.tsx`
 | `schema.ts` | Zod schemas for `Answers`, `Lead`, `SubmitInput`. Source of truth for field shapes. |
 | `wizardData.ts` | `VisualOption[]` arrays for every wizard step's choices, with labels and image imports. |
 | `submit.ts` | `submitLead(payload)` — plain `fetch` to `window.rgCalculator.endpoint` (set by `wp_localize_script`). Falls back to `/wp-json/royal-glass/v1/leads`. |
+
+**`not_sure` fallback:** For any option where the user selects `not_sure`, `pricing.ts` substitutes the cheapest baseline (e.g. toughened glass, spigots, standard finish, 12mm). This means `not_sure` answers never inflate the estimate but do trigger `needsReview` (if ≥3 are `not_sure`). The `PricingResult.needsReview` flag is set when any `reviewTriggers` condition fires — it changes the message shown in `ResultView` but does not block submission.
 
 **To change prices:** Edit only `calculator.config.ts`. Run `npm run build` and redeploy.
 
@@ -108,6 +111,8 @@ Tailwind v4 with `@theme inline`. All semantic color tokens (primary, card, mute
 ---
 
 ## Non-negotiable constraints
+
+**Unused deps still in `package.json`:** `@supabase/supabase-js` and `@tanstack/react-query` are installed but not imported anywhere in the production code path. Do not use them for new features.
 
 Never reintroduce:
 - `@tanstack/react-start`, `@cloudflare/vite-plugin`, `@lovable.dev/vite-tanstack-config`, or any Cloudflare Worker config

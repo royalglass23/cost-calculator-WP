@@ -4,7 +4,11 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(zip -r rg-calculator.zip rg-calculator/)",
-      "PowerShell(Compress-Archive *)"
+      "PowerShell(Compress-Archive *)",
+      "Bash(ls dist/*.jpg)",
+      "Bash(cp dist/*.jpg wordpress-plugin/rg-calculator/assets/)",
+      "Bash(cp dist/rg-calculator.js wordpress-plugin/rg-calculator/assets/)",
+      "Bash(cp dist/rg-calculator.css wordpress-plugin/rg-calculator/assets/)"
     ]
   }
 }
