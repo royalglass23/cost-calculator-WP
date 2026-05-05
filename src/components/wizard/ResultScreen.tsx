@@ -99,6 +99,7 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
       )}
 
       {/* Breakdown */}
+      {/*
       <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937', marginTop: 0, marginBottom: '16px' }}>Estimate breakdown</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
@@ -111,7 +112,8 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
             <span>{formatNZD(estimate.subtotal)}</span>
           </div>
         </div>
-      </div>
+      </div>    
+      */}
 
       {/* Project summary */}
       <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
@@ -150,7 +152,7 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
         <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginTop: 0, marginBottom: '16px' }}>What happens next</h3>
         {[
           { n: '1', title: 'We review your details', body: 'Our team checks your project and contacts you within 1 business day.' },
-          { n: '2', title: 'Free site visit',         body: 'We visit to take precise measurements and confirm the scope.' },
+          { n: '2', title: 'Site visit',         body: 'We visit to take precise measurements and confirm the scope.' },
           { n: '3', title: 'Confirmed quote',          body: 'You receive a detailed, fixed-price quote with timeline. No obligation.' },
         ].map(item => (
           <div key={item.n} style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>

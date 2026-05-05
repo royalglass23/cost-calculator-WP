@@ -45,7 +45,7 @@ export function ConfirmationScreen({ lead, estimate }: ConfirmationScreenProps) 
           {[
             { step: '1', title: 'We review your details', body: 'Our team checks your project details and confirms availability.' },
             { step: '2', title: 'We call you', body: `We will call ${lead.phone} ${lead.callPreference !== 'anytime' ? `during your preferred time (${lead.callPreference})` : 'within business hours'} to confirm the site visit.` },
-            { step: '3', title: 'Free site visit + confirmed quote', body: 'We measure up, finalise the scope, and send you a detailed fixed-price quote.' },
+            { step: '3', title: 'Site visit + confirmed quote', body: 'We measure up, finalise the scope, and send you a detailed fixed-price quote.' },
           ].map((item) => (
             <div key={item.step} className="flex gap-3">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1a3c5e] text-white text-xs font-bold">

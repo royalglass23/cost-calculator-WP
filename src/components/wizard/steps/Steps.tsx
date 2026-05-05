@@ -72,7 +72,7 @@ export function Step2Length({ answers, onChange }: StepProps) {
 
       <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <StepNote>
-          Not sure of the exact length? Give us your best estimate — we confirm precise measurements on the free site visit.
+          Not sure of the exact length? Give us your best estimate — we confirm precise measurement on site visit.
         </StepNote>
         {answers.length < 5 && (
           <div style={{ display: 'flex', gap: '8px', borderRadius: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', padding: '12px', fontSize: '14px', color: '#4b5563' }}>
@@ -357,7 +357,7 @@ export function Step6FixingMethod({ answers, onChange }: StepProps) {
       {answers.fixingMethod === 'not_sure' && (
         <div style={{ marginTop: '16px' }}>
           <StepNote>
-            Our team will assess your deck or floor on the free site visit and recommend the system that suits your structure best.
+            Our team will assess your deck or floor on site visit and recommend the system that suits your structure best.
           </StepNote>
         </div>
       )}
