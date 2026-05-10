@@ -1,9 +1,11 @@
 import React from 'react';
-import { TOTAL_WIZARD_STEPS } from '../../lib/calculator/engine';
+//import { TOTAL_WIZARD_STEPS } from '../../lib/calculator/engine';
 import type { WizardStep } from '../../lib/calculator/types';
 
 interface WizardShellProps {
   step: WizardStep;
+  visualStep: number;
+  totalSteps: number;
   onBack: () => void;
   onContinue: () => void;
   canContinue: boolean;
@@ -13,15 +15,17 @@ interface WizardShellProps {
 
 export function WizardShell({
   step,
+  visualStep,
+  totalSteps,
   onBack,
   onContinue,
   canContinue,
   children,
   hideNav = false,
 }: WizardShellProps) {
-  const isWizardStep = step >= 1 && step <= TOTAL_WIZARD_STEPS;
+  const isWizardStep = visualStep > 1;
   const progressPercent = isWizardStep
-    ? Math.round((step / TOTAL_WIZARD_STEPS) * 100)
+    ? Math.round((visualStep / totalSteps) * 100)
     : 100;
 
   return (
@@ -40,7 +44,7 @@ export function WizardShell({
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Step {step} / {TOTAL_WIZARD_STEPS}
+              Step {visualStep} / {totalSteps}
             </span>
             <span style={{ fontSize: '11px', color: '#9ca3af' }}>{progressPercent}%</span>
           </div>

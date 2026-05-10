@@ -86,10 +86,12 @@ export default function App() {
   function goBack() {
     if (step === 9) { setStep(7); return; }
     if (step === 8) { setStep(9); return; }
+    if (step === 6 && answers.projectType === 'balustrade') { setStep(4); return; }
     if (step > 1) setStep((prev) => (prev - 1) as WizardStep);
   }
 
   function goForward() {
+    if (step === 4 && answers.projectType === 'balustrade') { setStep(6); return; }
     if (step < 7) { setStep((prev) => (prev + 1) as WizardStep); return; }
     if (step === 7) {
       const result = calculateEstimate(answers, pricing);
@@ -134,9 +136,17 @@ export default function App() {
     }
   };
 
+  const stepSequence = answers.projectType === 'balustrade' 
+    ? [1, 2, 3, 4, 6, 7] 
+    : [1, 2, 3, 4, 5, 6, 7];
+  const totalSteps = stepSequence.length;
+  const visualStep = stepSequence.indexOf(step) + 1 || 1;
+
   return (
     <WizardShell
       step={step}
+      visualStep={visualStep}
+      totalSteps={totalSteps}
       onBack={goBack}
       onContinue={goForward}
       canContinue={canContinue()}
