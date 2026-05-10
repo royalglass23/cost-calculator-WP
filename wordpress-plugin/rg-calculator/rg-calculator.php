@@ -186,6 +186,35 @@ function rg_calc_schema_markup() {
     echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . '</script>' . "\n";
 }
 
+// ── Header: dark background on calculator page only ───────────────────────────
+add_action('wp_head', 'rg_calc_header_styles');
+
+function rg_calc_header_styles() {
+    global $post;
+    if (!$post || !has_shortcode($post->post_content, 'rg_calculator')) return;
+    ?>
+    <style>
+      #masthead {
+        background-color: #3d3d3d !important;
+      }
+      #masthead a,
+      #masthead .main-header-menu .menu-item > a,
+      #masthead .ast-builder-menu-1 .menu-item > a {
+        color: #ffffff !important;
+      }
+      #masthead .menu-toggle,
+      #masthead .ast-mobile-menu-trigger-toggle,
+      #masthead .ast-mobile-menu-trigger-toggle span {
+        color: #ffffff !important;
+      }
+      
+      #rg-calculator-root {
+        margin-top: 100px;
+      }
+    </style>
+    <?php
+}
+
 // ── REST: fix 404 on first install (flush rewrite rules) ─────────────────────
 add_action('init', 'rg_calc_register_routes_init');
 function rg_calc_register_routes_init() {
