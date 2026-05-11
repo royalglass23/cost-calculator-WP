@@ -4,7 +4,54 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.1.0 — 2026-05-01 (current)
+## v2.1.1 — 2026-05-11 (current)
+
+### Codebase cleanup
+
+**Dead files removed:**
+- `AGENTS.md` — stale duplicate of CLAUDE.md for OpenAI Codex (wrong tool, outdated content)
+- `includes/admin-page.php` — old admin page superseded by `admin-leads.php`; called `rg_calc_get_leads()` which no longer exists; not `require_once`'d anywhere
+- `src/components/wizard/ConfirmationScreen.tsx` — orphaned component not imported anywhere; replaced by `ResultScreen.tsx`
+- `src/components/wizard/shared.tsx` — orphaned file not imported anywhere (`Steps.tsx` imports from `steps/shared.tsx`)
+
+**37 orphaned image assets removed** from `wordpress-plugin/rg-calculator/assets/` — leftover from old wizard steps (glass type, shape, substrate, access, clarity, handrail, working height). The 15 images actually used by the IMAGES map in `config.ts` are retained.
+
+**`package.json` stripped of 35 unused dependencies** inherited from the original TanStack/shadcn template: all `@radix-ui/*` packages, `@supabase/supabase-js`, `@tanstack/react-query`, `@tanstack/react-router`, `react-router-dom`, `react-hook-form`, `@hookform/resolvers`, `lucide-react`, `recharts`, `zod`, `clsx`, `class-variance-authority`, `sonner`, `vaul`, `cmdk`, `date-fns`, `embla-carousel-react`, `input-otp`, `react-day-picker`, `react-resizable-panels`, `tailwind-merge`, `tw-animate-css`, `vite-tsconfig-paths`. Tailwind itself retained (needed for `NZAddressAutocomplete.tsx`). Build confirmed working post-cleanup.
+
+**`package.json` renamed** from `tanstack_start_ts` → `rg-calculator`.
+
+**`tailwindcss` / `@tailwindcss/vite` moved to devDependencies** (build-time tools, not runtime).
+
+### Security audit & documentation
+
+Full codebase security scan. No code changed yet — findings documented for prioritised fixes.
+
+**Issues found (10 total, none exploited):**
+
+| # | Severity | Location | Issue |
+|---|---|---|---|
+| 1 | HIGH | `api.php:143` | `HTTP_CF_CONNECTING_IP` trusted without verifying REMOTE_ADDR is a Cloudflare IP — rate limits bypassable if origin is accessed directly |
+| 2 | HIGH | `api.php:179` | `/estimate-email` has no Turnstile, honeypot, or time gate — branded HTML email can be spammed |
+| 3 | MED | `database.php` | Consent validated but never stored — no audit trail for NZ Privacy Act |
+| 4 | MED | `api.php:102` | Client-supplied estimate values stored/emailed without server-side recalculation |
+| 5 | MED | `api.php:185` | `/estimate-email` skips `rg_validate_answers()` — arbitrary data flows into customer email |
+| 6 | LOW | `api.php:167` | Rate limit check/set non-atomic — concurrent requests can exceed limit by 1 |
+| 7 | LOW | `email.php:129` | `esc_html()` used in email subjects — wrong escaping function, HTML entities appear literally |
+| 8 | LOW | `email.php:128` | `$from_email` inserted into headers without `sanitize_email()` |
+| 9 | INFO | `LeadCapture.tsx` | `marketingConsent` captured in state but never sent to server or stored |
+| 10 | INFO | `NZAddressAutocomplete.tsx` | Uses Tailwind `className` props — violates inline-style constraint |
+
+**CLAUDE.md updated:**
+- Fixed `NZAddressAutocomplete` description (was "Google Maps Places" — actually uses Nominatim/OpenStreetMap, no API key)
+- `RG_GOOGLE_MAPS_KEY` constant documented as retained but currently unused
+- `/estimate-email` API description flagged with known security gaps
+- IP detection behaviour documented with Cloudflare caveat
+- New **Security** section added: issue table + current security model summary
+- Non-negotiable constraints expanded: `rg_validate_answers()` and Turnstile required on all public POST endpoints
+
+---
+
+## v2.1.0 — 2026-05-01
 
 ### Features added
 - **Send-to-email on result screen** — "Get this estimate in your inbox" card on the result screen. Pre-fills with the submitted email address. User can change it to send to a builder, partner, or architect. Calls `POST /wp-json/royal-glass/v1/estimate-email`.

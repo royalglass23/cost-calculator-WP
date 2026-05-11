@@ -124,8 +124,9 @@ AMBER;
 ROW;
     }
 
-    $name        = esc_html($first_name ?: 'there');
-    $from_email  = defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email');
+    $name        = sanitize_text_field($first_name ?: 'there');
+    $name_html   = esc_html($name);
+    $from_email  = sanitize_email(defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email'));
     $subject     = "{$name}, your Royal Glass estimate is here";
 
     $html = <<<HTML
@@ -143,7 +144,7 @@ ROW;
 <!-- ── Header ─────────────────────────────────────────── -->
 <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 55%,#20496f 100%);padding:40px 36px 36px;">
   <p style="color:#7cb9f5;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 10px 0;">Royal Glass Limited</p>
-  <h1 style="color:#ffffff;font-size:27px;font-weight:700;margin:0;line-height:1.3;">Your {$project} estimate<br>is ready, {$name}.</h1>
+  <h1 style="color:#ffffff;font-size:27px;font-weight:700;margin:0;line-height:1.3;">Your {$project} estimate<br>is ready, {$name_html}.</h1>
 </div>
 
 <!-- ── Body ──────────────────────────────────────────── -->
@@ -191,7 +192,7 @@ ROW;
           <div style="background:#1a3c5e;color:#fff;font-size:12px;font-weight:700;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;">2</div>
         </td>
         <td valign="top" style="padding-bottom:18px;padding-left:8px;">
-          <p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px 0;">Free site visit &mdash; no obligation, no pressure</p>
+          <p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px 0;">Site visit &mdash; no obligation, no pressure</p>
           <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.6;">We come to you, take precise measurements, and sort out every site-specific detail on the spot.</p>
         </td>
       </tr>
@@ -241,9 +242,10 @@ ROW;
 </html>
 HTML;
 
+    // No custom From — let WordPress use its default (authorized by Bluehost's SPF).
+    // Reply-To directs any replies to the notify address without triggering SPF issues.
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
-        "From: Royal Glass <{$from_email}>",
         "Reply-To: {$from_email}",
     ];
 

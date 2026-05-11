@@ -135,11 +135,14 @@ function rg_render_lead_detail(int $id): void {
                 <h3 style="margin-top:0">Contact details</h3>
                 <table class="form-table"><tbody>
                     <?php foreach ([
-                        'Name'     => "{$lead->first_name} {$lead->last_name}",
-                        'Phone'    => $lead->phone,
-                        'Email'    => $lead->email,
-                        'Address'  => $lead->address,
-                        'Best time'=> $lead->call_pref,
+                        'Name'      => "{$lead->first_name} {$lead->last_name}",
+                        'Phone'     => $lead->phone,
+                        'Email'     => $lead->email,
+                        'Address'   => $lead->address,
+                        'Best time' => $lead->call_pref,
+                        'Consent'   => $lead->consent_given
+                            ? '✓ Given — ' . date('d M Y H:i', strtotime($lead->consented_at)) . ' NZST'
+                            : '✗ Not recorded',
                     ] as $label => $value): ?>
                     <tr><th style="width:100px"><?= esc_html($label) ?></th><td><?= esc_html($value) ?></td></tr>
                     <?php endforeach; ?>

@@ -40,6 +40,7 @@ function rg_validate_lead(array $lead) {
  * Sanitize a lead array for database storage.
  */
 function rg_sanitize_lead(array $lead): array {
+    $consented = !empty($lead['consent']);
     return [
         'firstName'      => sanitize_text_field($lead['firstName']   ?? ''),
         'lastName'       => sanitize_text_field($lead['lastName']    ?? ''),
@@ -48,6 +49,8 @@ function rg_sanitize_lead(array $lead): array {
         'address'        => sanitize_text_field($lead['address']     ?? ''),
         'callPreference' => sanitize_text_field($lead['callPreference'] ?? 'anytime'),
         'notes'          => sanitize_textarea_field($lead['notes']   ?? ''),
+        'consentGiven'   => $consented ? 1 : 0,
+        'consentedAt'    => $consented ? current_time('mysql') : null,
     ];
 }
 

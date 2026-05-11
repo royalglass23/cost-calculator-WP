@@ -141,22 +141,11 @@ function rg_error(string $message, int $status): WP_REST_Response {
 }
 
 function rg_get_client_ip(): string {
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-        $ip = trim((string) $_SERVER['HTTP_CF_CONNECTING_IP']);
-        if (filter_var($ip, FILTER_VALIDATE_IP)) {
-            return $ip;
-        }
-    }
-
+    // Use REMOTE_ADDR — the actual TCP connection IP on Bluehost (no Cloudflare proxy).
+    // HTTP_CF_CONNECTING_IP is intentionally not used: the site is not behind Cloudflare's
+    // proxy, so that header is never set legitimately and would be fully attacker-controlled.
     if (!empty($_SERVER['REMOTE_ADDR'])) {
         $ip = trim((string) $_SERVER['REMOTE_ADDR']);
-        if (filter_var($ip, FILTER_VALIDATE_IP)) {
-            return $ip;
-        }
-    }
-
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $ip = trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
         if (filter_var($ip, FILTER_VALIDATE_IP)) {
             return $ip;
         }
@@ -187,6 +176,11 @@ function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {
 
     if (!is_email($email))             return rg_error('Please enter a valid email address.', 422);
     if (empty($answers) || empty($estimate)) return rg_error('Missing project data.', 422);
+
+    $answers_validation = rg_validate_answers($answers);
+    if (is_wp_error($answers_validation)) {
+        return rg_error($answers_validation->get_error_message(), 422);
+    }
 
     // Separate rate limit bucket for estimate emails (5/hour per IP, admin bypass)
     $ip       = rg_get_client_ip();

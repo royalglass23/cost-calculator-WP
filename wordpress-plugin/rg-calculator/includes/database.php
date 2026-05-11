@@ -1,6 +1,8 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+define('RG_DB_VERSION', '2.1.1');
+
 function rg_create_leads_table(): void {
     global $wpdb;
     $table   = $wpdb->prefix . 'rg_leads';
@@ -28,6 +30,8 @@ function rg_create_leads_table(): void {
         est_subtotal  DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
         needs_consult TINYINT(1)      NOT NULL DEFAULT 0,
         consult_notes TEXT            NOT NULL DEFAULT '',
+        consent_given TINYINT(1)      NOT NULL DEFAULT 0,
+        consented_at  DATETIME        NULL,
         created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
@@ -37,6 +41,25 @@ function rg_create_leads_table(): void {
 
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
+
+    // dbDelta silently skips adding columns to existing tables in some environments.
+    // Explicitly ALTER TABLE for any columns that are missing.
+    $existing = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+    if (!in_array('consent_given', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN consent_given TINYINT(1) NOT NULL DEFAULT 0 AFTER consult_notes");
+    }
+    if (!in_array('consented_at', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN consented_at DATETIME NULL AFTER consent_given");
+    }
+}
+
+// Run schema migrations automatically when any admin page loads and the DB version is stale.
+add_action('admin_init', 'rg_maybe_migrate_db');
+function rg_maybe_migrate_db(): void {
+    if (get_option('rg_db_version') !== RG_DB_VERSION) {
+        rg_create_leads_table();
+        update_option('rg_db_version', RG_DB_VERSION);
+    }
 }
 
 /**
@@ -72,8 +95,10 @@ function rg_save_lead(array $lead, array $answers, array $est): int {
             'est_subtotal'  => $e['subtotal'],
             'needs_consult' => $e['needsConsultation'] ? 1 : 0,
             'consult_notes' => implode("\n", $e['consultationReasons']),
+            'consent_given' => $l['consentGiven'],
+            'consented_at'  => $l['consentedAt'],
         ],
-        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%f','%f','%f','%d','%s']
+        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%f','%f','%f','%d','%s','%d','%s']
     );
 
     return $result ? (int) $wpdb->insert_id : 0;
