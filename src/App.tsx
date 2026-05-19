@@ -101,11 +101,10 @@ export default function App() {
     );
   }
 
-  // Default: single-page calculator form
+  // Default: calculator step flow
   return (
     <CalculatorForm
       answers={answers}
-      estimate={estimate}
       onChange={updateAnswers}
       onGetEstimate={() => setShowLeadCapture(true)}
     />
