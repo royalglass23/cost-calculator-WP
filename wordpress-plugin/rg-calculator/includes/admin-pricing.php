@@ -30,13 +30,13 @@ function rg_admin_pricing_page(): void {
     if (isset($_POST['rg_pricing_nonce']) && wp_verify_nonce($_POST['rg_pricing_nonce'], 'rg_save_pricing')) {
         $saved = [
             'scenarios' => [
-                'deck_pool_fence'    => [
-                    'ratePerMetre' => (float) ($_POST['rate_deck_pool_fence']    ?? 280),
-                    'gatePrice'    => (float) ($_POST['gate_deck_pool_fence']    ?? 680),
+                'ground_level'       => [
+                    'ratePerMetre' => (float) ($_POST['rate_ground_level']       ?? 280),
+                    'gatePrice'    => null,
                 ],
                 'balcony_balustrade' => [
                     'ratePerMetre' => (float) ($_POST['rate_balcony_balustrade'] ?? 320),
-                    'gatePrice'    => null, // gates not applicable for balustrades
+                    'gatePrice'    => null,
                 ],
                 'premium_pool_fence' => [
                     'ratePerMetre' => (float) ($_POST['rate_premium_pool_fence'] ?? 380),
@@ -44,19 +44,29 @@ function rg_admin_pricing_page(): void {
                 ],
                 'stair_balustrade'   => [
                     'ratePerMetre' => (float) ($_POST['rate_stair_balustrade']   ?? 330),
-                    'gatePrice'    => (float) ($_POST['gate_stair_balustrade']   ?? 750),
+                    'gatePrice'    => null,
                 ],
             ],
             'minimumLength'           => (int)   ($_POST['minimumLength']           ?? 5),
             'cornerSurcharge'         => (float) ($_POST['cornerSurcharge']         ?? 85),
             'hardwareFinishSurcharge' => [
                 'standard_chrome' => 0,
-                'matte_black'     => (float) ($_POST['finish_matte_black']     ?? 15),
-                'brushed_chrome'  => (float) ($_POST['finish_brushed_chrome']  ?? 12),
-                'brass'           => (float) ($_POST['finish_brass']           ?? 22),
-                'custom'          => 0,
+                'matte_black'     => (float) ($_POST['finish_matte_black']      ?? 15),
+                'brushed_chrome'  => (float) ($_POST['finish_brushed_chrome']   ?? 12),
+                'powder_coated'   => (float) ($_POST['finish_powder_coated']    ?? 22),
                 'not_sure'        => 0,
             ],
+            'glassTypeSurcharge' => [
+                'toughened_12mm' => 0,
+                'laminated'      => (float) ($_POST['glass_type_laminated'] ?? 0),
+            ],
+            'glassColourSurcharge' => [
+                'clear'    => 0,
+                'tinted'   => (float) ($_POST['glass_colour_tinted']   ?? 0),
+                'frosted'  => (float) ($_POST['glass_colour_frosted']  ?? 0),
+                'low_iron' => (float) ($_POST['glass_colour_low_iron'] ?? 0),
+            ],
+            'interlikingRailsSurcharge' => (float) ($_POST['interlinking_rails'] ?? 0),
             'rangeLowPercent'  => (int) ($_POST['rangeLowPercent']  ?? 90),
             'rangeHighPercent' => (int) ($_POST['rangeHighPercent'] ?? 120),
         ];
@@ -67,28 +77,33 @@ function rg_admin_pricing_page(): void {
     // Load current values
     $defaults = [
         'scenarios' => [
-            'deck_pool_fence'    => ['ratePerMetre' => 280, 'gatePrice' => 680],
+            'ground_level'       => ['ratePerMetre' => 280, 'gatePrice' => null],
             'balcony_balustrade' => ['ratePerMetre' => 320, 'gatePrice' => null],
             'premium_pool_fence' => ['ratePerMetre' => 380, 'gatePrice' => 680],
-            'stair_balustrade'   => ['ratePerMetre' => 330, 'gatePrice' => 750],
+            'stair_balustrade'   => ['ratePerMetre' => 330, 'gatePrice' => null],
         ],
-        'minimumLength'           => 5,
-        'cornerSurcharge'         => 85,
-        'hardwareFinishSurcharge' => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'brass' => 22, 'custom' => 0, 'not_sure' => 0],
-        'rangeLowPercent'         => 90,
-        'rangeHighPercent'        => 120,
+        'minimumLength'            => 5,
+        'cornerSurcharge'          => 85,
+        'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
+        'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
+        'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
+        'interlikingRailsSurcharge' => 0,
+        'rangeLowPercent'          => 90,
+        'rangeHighPercent'         => 120,
     ];
 
     $saved_option = get_option('rg_calculator_pricing', []);
-    // Only merge if the saved option has the new nested V2 structure
     if (!empty($saved_option['scenarios']) && !empty($saved_option['hardwareFinishSurcharge'])) {
         $p = array_replace_recursive($defaults, $saved_option);
     } else {
         $p = $defaults;
     }
 
-    $sc = $p['scenarios'];
-    $hw = $p['hardwareFinishSurcharge'];
+    $sc  = $p['scenarios'];
+    $hw  = $p['hardwareFinishSurcharge'];
+    $gt  = $p['glassTypeSurcharge'];
+    $gc  = $p['glassColourSurcharge'];
+    $ir  = $p['interlikingRailsSurcharge'];
     ?>
     <div class="wrap">
         <h1>RG Calculator — Pricing Settings</h1>
@@ -109,10 +124,10 @@ function rg_admin_pricing_page(): void {
                 <tbody>
                 <?php
                 $scenario_rows = [
-                    ['deck_pool_fence',    'Deck Pool Fence (≤1m)',            true],
+                    ['ground_level',       'Ground Level Fence (≤1m)',         false],
                     ['balcony_balustrade', 'Balcony / Patio Balustrade (>1m)', false],
-                    ['premium_pool_fence', 'Premium Pool Fence (>1m)',          true],
-                    ['stair_balustrade',   'Stair Balustrade',                  true],
+                    ['premium_pool_fence', 'Premium Pool Fence (1.2m)',         true],
+                    ['stair_balustrade',   'Stair Balustrade',                  false],
                 ];
                 foreach ($scenario_rows as [$key, $label, $has_gate]):
                     $rate = $sc[$key]['ratePerMetre'] ?? '';
@@ -129,11 +144,65 @@ function rg_admin_pricing_page(): void {
                             <input type="number" name="gate_<?= esc_attr($key) ?>" value="<?= esc_attr($gate) ?>"
                                    step="any" min="0" style="width:100px" class="regular-text">
                         <?php else: ?>
-                            <span style="color:#999">N/A — gates not applicable</span>
+                            <span style="color:#999">N/A</span>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Glass Type Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when selected. 12mm Toughened is always the base — no surcharge. Shown only for Balcony/Patio and Stair scenarios.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <tr>
+                    <th scope="row"><label for="glass_type_laminated">Laminated Glass</label></th>
+                    <td>
+                        <input type="number" id="glass_type_laminated" name="glass_type_laminated"
+                               value="<?= esc_attr($gt['laminated'] ?? 0) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Glass Colour Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when selected. Clear glass is always free. Frosted glass diffuses light for privacy.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <?php
+                $colour_rows = [
+                    ['tinted',   'Tinted Glass',           $gc['tinted']   ?? 0],
+                    ['frosted',  'Frosted Glass',          $gc['frosted']  ?? 0],
+                    ['low_iron', 'Low Iron / Ultra-Clear', $gc['low_iron'] ?? 0],
+                ];
+                foreach ($colour_rows as [$key, $label, $val]):
+                ?>
+                <tr>
+                    <th scope="row"><label for="glass_colour_<?= esc_attr($key) ?>"><?= esc_html($label) ?></label></th>
+                    <td>
+                        <input type="number" id="glass_colour_<?= esc_attr($key) ?>" name="glass_colour_<?= esc_attr($key) ?>"
+                               value="<?= esc_attr($val) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Interlinking Rails Surcharge ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when interlinking (top) rails are added. Only available with 12mm Toughened glass on Balcony/Patio and Stair scenarios.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <tr>
+                    <th scope="row"><label for="interlinking_rails">Interlinking Rails</label></th>
+                    <td>
+                        <input type="number" id="interlinking_rails" name="interlinking_rails"
+                               value="<?= esc_attr($ir) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
                 </tbody>
             </table>
 
@@ -145,7 +214,7 @@ function rg_admin_pricing_page(): void {
                 $finish_rows = [
                     ['matte_black',    'Matte Black',    $hw['matte_black']    ?? 15],
                     ['brushed_chrome', 'Brushed Chrome', $hw['brushed_chrome'] ?? 12],
-                    ['brass',          'Brass',          $hw['brass']          ?? 22],
+                    ['powder_coated',  'Powder Coated',  $hw['powder_coated']  ?? 22],
                 ];
                 foreach ($finish_rows as [$key, $label, $val]):
                 ?>
@@ -202,19 +271,22 @@ function rg_admin_pricing_page(): void {
             <h2 style="margin-top:2rem">Formula Reference</h2>
             <div style="background:#f9f9f9;border:1px solid #e0e0e0;padding:16px;border-radius:4px;max-width:640px;font-size:13px;line-height:1.7">
                 <code style="display:block;background:#fff;padding:12px;border-radius:3px;white-space:pre-wrap">
-Billable length  = max(entered length, minimumLength)
+Billable length      = max(entered length, minimumLength)
 
-Base cost        = billable length × scenario base rate
-Corner cost      = number of corners × corner surcharge
-Gate cost        = number of gates × scenario gate price
-Finish surcharge = billable length × finish surcharge/m
+Base cost            = billable length × scenario base rate
+Corner cost          = number of corners × corner surcharge
+Gate cost            = number of gates × gate price  (Pool Fence only)
+Glass type surcharge = billable length × glass type surcharge/m
+Glass colour surcharge = billable length × colour surcharge/m
+Interlinking rails   = billable length × interlinking rails surcharge/m  (if ticked)
+Finish surcharge     = billable length × finish surcharge/m
 
-Subtotal         = base + corners + gates + finish
-Low estimate     = subtotal × rangeLowPercent  / 100
-High estimate    = subtotal × rangeHighPercent / 100
+Subtotal             = base + corners + gates + glass type + glass colour + interlinking + finish
+Low estimate         = subtotal × rangeLowPercent  / 100
+High estimate        = subtotal × rangeHighPercent / 100
                 </code>
-                <p style="margin-top:12px;color:#666"><strong>Assumptions baked in:</strong><br>
-                Toughened 12mm glass · straight panels · ground-level access · NZ standard height per scenario</p>
+                <p style="margin-top:12px;color:#666"><strong>Standard heights assumed:</strong><br>
+                Ground Level ≤1m · Balcony/Patio 1m (NZBC) · Pool Fence 1.2m (NZ Pool Safety Act) · Stair 1m (NZBC)</p>
             </div>
 
             <?php submit_button('Save pricing', 'primary', 'submit', true, ['style' => 'margin-top:1.5rem']); ?>
