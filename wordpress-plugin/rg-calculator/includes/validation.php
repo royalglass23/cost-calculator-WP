@@ -58,14 +58,22 @@ function rg_sanitize_lead(array $lead): array {
  * Sanitize answers for storage.
  */
 function rg_sanitize_answers(array $answers): array {
+    $allowed_scenarios = ['deck_pool_fence', 'balcony_balustrade', 'premium_pool_fence', 'stair_balustrade'];
+    $scenario = sanitize_text_field($answers['scenario'] ?? '');
+
+    $raw_triggers = $answers['callTriggers'] ?? [];
+    $call_triggers = is_array($raw_triggers)
+        ? array_map('sanitize_text_field', $raw_triggers)
+        : [];
+
     return [
-        'projectType'    => sanitize_text_field($answers['projectType']    ?? ''),
-        'length'         => (int)   ($answers['length']        ?? $answers['lengthMetres'] ?? 0),
-        'height'         => sanitize_text_field($answers['height']         ?? ''),
+        'scenario'       => in_array($scenario, $allowed_scenarios, true) ? $scenario : '',
+        'length'         => (int)   ($answers['length']        ?? 0),
         'corners'        => (int)   ($answers['corners']       ?? 0),
         'gates'          => (int)   ($answers['gates']         ?? 0),
         'fixingMethod'   => sanitize_text_field($answers['fixingMethod']   ?? ''),
         'hardwareFinish' => sanitize_text_field($answers['hardwareFinish'] ?? ''),
+        'callTriggers'   => $call_triggers,
     ];
 }
 
@@ -74,11 +82,10 @@ function rg_sanitize_answers(array $answers): array {
  */
 function rg_sanitize_estimate(array $est): array {
     return [
-        'low'                => (float) ($est['low']                ?? $est['estimate_low'] ?? 0),
-        'high'               => (float) ($est['high']               ?? $est['estimate_high'] ?? 0),
-        'subtotal'           => (float) ($est['subtotal']           ?? 0),
-        'needsConsultation'  => (bool)  ($est['needsConsultation']  ?? false),
-        'consultationReasons'=> array_map('sanitize_text_field', (array) ($est['consultationReasons'] ?? [])),
+        'low'        => (float) ($est['low']      ?? $est['estimate_low']  ?? 0),
+        'high'       => (float) ($est['high']     ?? $est['estimate_high'] ?? 0),
+        'subtotal'   => (float) ($est['subtotal'] ?? 0),
+        'needsCallUs'=> (bool)  ($est['needsCallUs'] ?? false),
     ];
 }
 
@@ -112,18 +119,19 @@ function rg_normalize_lead(array $lead): array {
  * Validate calculator answers shape and bounds.
  */
 function rg_validate_answers(array $answers) {
-    $project_type = sanitize_text_field($answers['projectType'] ?? '');
-    if ($project_type === '' || !in_array($project_type, ['balustrade', 'pool_fence'], true)) {
-        return new WP_Error('invalid_project_type', 'Invalid project type');
+    $allowed_scenarios = ['deck_pool_fence', 'balcony_balustrade', 'premium_pool_fence', 'stair_balustrade'];
+    $scenario = sanitize_text_field($answers['scenario'] ?? '');
+    if ($scenario === '' || !in_array($scenario, $allowed_scenarios, true)) {
+        return new WP_Error('invalid_scenario', 'Invalid scenario');
     }
 
-    $length = (int) ($answers['length'] ?? $answers['lengthMetres'] ?? 0);
+    $length = (int) ($answers['length'] ?? 0);
     if ($length < 1 || $length > 200) {
         return new WP_Error('invalid_length', 'Invalid project length');
     }
 
     $corners = (int) ($answers['corners'] ?? 0);
-    $gates = (int) ($answers['gates'] ?? 0);
+    $gates   = (int) ($answers['gates']   ?? 0);
     if ($corners < 0 || $corners > 50 || $gates < 0 || $gates > 20) {
         return new WP_Error('invalid_counts', 'Invalid corner or gate count');
     }

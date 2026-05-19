@@ -192,16 +192,18 @@ function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {
         set_transient($key, $count + 1, HOUR_IN_SECONDS);
     }
 
-    $em_email     = $email;
-    $em_name      = $first_name;
-    $em_answers   = $answers;
-    $em_estimate  = $estimate;
-    add_action('shutdown', function() use ($em_email, $em_name, $em_answers, $em_estimate) {
-        if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
-        ignore_user_abort(true);
-        rg_send_estimate_email_to_customer($em_email, $em_name, $em_answers, $em_estimate);
-    });
+    $sent = rg_send_estimate_email_to_customer($email, $first_name, $answers, $estimate);
 
+    if (!$sent) {
+        error_log(sprintf(
+            'RG Calculator estimate email failed for %s from IP %s',
+            $email,
+            $ip
+        ));
+
+        return rg_error('We could not send the email right now. Please try again, or call us on 0800 769 254.', 502);
+    }
+    
     return new WP_REST_Response(['ok' => true], 200);
 }
 
