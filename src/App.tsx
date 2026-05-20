@@ -82,13 +82,15 @@ export default function App() {
   // Result screen — shown after lead is successfully submitted
   if (leadInfo) {
     return (
-      <ResultScreen
-        answers={answers}
-        estimate={estimate}
-        leadId={leadInfo.leadId}
-        email={leadInfo.email}
-        firstName={leadInfo.firstName}
-      />
+      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '24px 16px', fontFamily: 'inherit' }}>
+        <ResultScreen
+          answers={answers}
+          estimate={estimate}
+          leadId={leadInfo.leadId}
+          email={leadInfo.email}
+          firstName={leadInfo.firstName}
+        />
+      </div>
     );
   }
 
