@@ -38,6 +38,7 @@ Gates:      {$a['gates']}
 Glass type: {$a['glassType']}
 Colour:     {$a['glassColour']}
 Fixing:     {$a['fixingMethod']}
+Substrate:  {$a['substrate']}
 Finish:     {$a['hardwareFinish']}
 
 ─── Estimate ─────────────────────────────────────

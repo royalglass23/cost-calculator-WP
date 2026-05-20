@@ -5,6 +5,7 @@ import type {
   GlassType,
   GlassColour,
   FixingMethod,
+  SubstrateType,
   HardwareFinish,
 } from "../lib/calculator/types";
 import { IMAGES } from "../lib/calculator/config";
@@ -126,12 +127,7 @@ const GLASS_COLOURS: Array<{ value: GlassColour; title: string; description: str
   },
 ];
 
-const FIXING_OPTIONS: Array<{
-  value: FixingMethod;
-  title: string;
-  description: string;
-  image: string;
-}> = [
+const FIXING_OPTIONS: Array<{ value: FixingMethod; title: string; description: string; image: string }> = [
   {
     value: "spigots",
     title: "Spigots",
@@ -158,13 +154,15 @@ const FIXING_OPTIONS: Array<{
   },
 ];
 
-const FINISH_OPTIONS: Array<{
-  value: HardwareFinish;
-  title: string;
-  description: string;
-  image: string;
-  surcharge?: string;
-}> = [
+const SUBSTRATE_OPTIONS: Array<{ value: SubstrateType; title: string; description: string; image: string }> = [
+  { value: "timber",   title: "Timber",   description: "Decking, joists or timber framing",         image: IMAGES.substrateTimber },
+  { value: "concrete", title: "Concrete", description: "Poured concrete slab or posts",             image: IMAGES.substrateConcrete },
+  { value: "tile",     title: "Tile",     description: "Tiled surface — pool surrounds, balconies", image: IMAGES.substrateTile },
+  { value: "steel",    title: "Steel",    description: "Steel frame or structural steel",            image: IMAGES.substrateSteel },
+  { value: "not_sure", title: "Not Sure", description: "Our team will confirm on site",              image: IMAGES.notSure },
+];
+
+const FINISH_OPTIONS: Array<{ value: HardwareFinish; title: string; description: string; image: string; surcharge?: string; badge?: string }> = [
   {
     value: "standard_chrome",
     title: "Chrome",
@@ -216,18 +214,15 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       updates.glassType = null;
     } else if (value === "premium_pool_fence") {
       if (answers.gates === 0) updates.gates = 1;
-      // pool fence uses assumed 12mm toughened — glass type step not shown
       updates.glassType = "toughened_12mm";
       updates.interlikingRails = false;
       updates.landingLength = 0;
     } else if (value === "ground_level") {
       updates.gates = 0;
-      // ground level uses assumed 12mm toughened — glass type step not shown
       updates.glassType = "toughened_12mm";
       updates.interlikingRails = false;
       updates.landingLength = 0;
     } else {
-      // balcony_balustrade
       updates.gates = 0;
       updates.glassType = null;
       updates.landingLength = 0;
@@ -238,7 +233,6 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
   function handleGlassTypeChange(value: GlassType) {
     const updates: Partial<WizardAnswers> = { glassType: value };
     if (value === "toughened_12mm") {
-      // toughened: interlinking rails are mandatory
       updates.interlikingRails = true;
     } else if (value === "laminated") {
       updates.interlikingRails = false;
@@ -251,9 +245,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       title: "What's your project?",
       canContinue: answers.scenario !== null,
       content: (
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
           {SCENARIOS.map((scenario) => (
             <SelectionCard
               key={scenario.value}
@@ -333,94 +325,76 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
         </>
       ),
     }] : []),
-    ...(!gatesHidden
-      ? [
-          {
-            title: "How many gates?",
-            canContinue: true,
-            content: (
-              <>
-                <SliderInput
-                  label="Gates"
-                  value={answers.gates}
-                  min={0}
-                  max={6}
-                  step={1}
-                  unit=""
-                  onChange={(value) => onChange({ gates: value })}
-                />
-                <StepNote>
-                  NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool fences.
-                </StepNote>
-                <StepNote>
-                  We use high-quality stainless steel gate hardware on all pool fence installations.
-                </StepNote>
-                {answers.gates === 0 && (
-                  <ComplianceWarning>
-                    You've set 0 gates — this may not meet NZ Pool Safety Act requirements. If access is via another compliant barrier (e.g. a locked door), zero gates is acceptable.
-                  </ComplianceWarning>
-                )}
-              </>
-            ),
-          },
-        ]
-      : []),
-    ...(!glassTypeHidden
-      ? [
-          {
-            title: "Glass type",
-            canContinue: answers.glassType !== null,
-            content: (
-              <>
-                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
-                  Toughened glass includes a capping rail at the top. Laminated glass bonds two layers and needs no capping.
-                </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                    gap: "12px",
-                  }}
-                >
-                  {GLASS_TYPES.map((opt) => (
-                    <SelectionCard
-                      key={opt.value}
-                      image={opt.image}
-                      title={opt.title}
-                      description={opt.description}
-                      selected={answers.glassType === opt.value}
-                      onSelect={() => handleGlassTypeChange(opt.value)}
-                      badge={opt.badge}
-                    />
-                  ))}
-                </div>
-              </>
-            ),
-          },
-        ]
-      : []),
-    {
-      title: "Glass colour",
+    ...(!gatesHidden ? [{
+      title: "How many gates?",
       canContinue: true,
       content: (
         <>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}
-          >
-            {GLASS_COLOURS.map((opt) => (
+          <SliderInput
+            label="Gates"
+            value={answers.gates}
+            min={0}
+            max={6}
+            step={1}
+            unit=""
+            onChange={(value) => onChange({ gates: value })}
+          />
+          <StepNote>
+            NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool fences.
+          </StepNote>
+          <StepNote>
+            We use high-quality stainless steel gate hardware on all pool fence installations.
+          </StepNote>
+          {answers.gates === 0 && (
+            <ComplianceWarning>
+              You've set 0 gates — this may not meet NZ Pool Safety Act requirements. If access is via another compliant barrier (e.g. a locked door), zero gates is acceptable.
+            </ComplianceWarning>
+          )}
+        </>
+      ),
+    }] : []),
+    ...(!glassTypeHidden ? [{
+      title: "Glass type",
+      canContinue: answers.glassType !== null,
+      content: (
+        <>
+          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
+            Toughened glass includes a capping rail at the top. Laminated glass bonds two layers and needs no capping.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+            {GLASS_TYPES.map((opt) => (
               <SelectionCard
                 key={opt.value}
                 image={opt.image}
                 title={opt.title}
                 description={opt.description}
-                selected={answers.glassColour === opt.value}
-                onSelect={() => onChange({ glassColour: opt.value as GlassColour })}
+                selected={answers.glassType === opt.value}
+                onSelect={() => handleGlassTypeChange(opt.value)}
                 badge={opt.badge}
-                compact
               />
             ))}
           </div>
         </>
+      ),
+    }] : []),
+    {
+      title: "Glass colour",
+      canContinue: true,
+      content: (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+          {GLASS_COLOURS.map((opt) => (
+            <SelectionCard
+              key={opt.value}
+              image={opt.image}
+              title={opt.title}
+              description={opt.description}
+              selected={answers.glassColour === opt.value}
+              onSelect={() => onChange({ glassColour: opt.value as GlassColour })}
+              badge={opt.badge}
+              compact
+            />
+          ))}
+        </div>
       ),
     },
     {
@@ -431,13 +405,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
           <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
             This is a preference — no price impact. Our team will confirm suitability on site.
           </p>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: "12px",
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
             {FIXING_OPTIONS.map((option) => (
               <SelectionCard
                 key={option.value}
@@ -454,12 +422,34 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       ),
     },
     {
+      title: "What is the substrate?",
+      canContinue: answers.substrate !== null,
+      content: (
+        <>
+          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
+            The material the glass will be fixed into or onto. This helps us plan the right fixing detail.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+            {SUBSTRATE_OPTIONS.map((opt) => (
+              <SelectionCard
+                key={opt.value}
+                image={opt.image}
+                title={opt.title}
+                description={opt.description}
+                selected={answers.substrate === opt.value}
+                onSelect={() => onChange({ substrate: opt.value as SubstrateType })}
+                compact
+              />
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
       title: "Hardware finish",
       canContinue: answers.hardwareFinish !== null,
       content: (
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
           {FINISH_OPTIONS.map((option) => (
             <SelectionCard
               key={option.value}
@@ -492,9 +482,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
   }
 
   return (
-    <div
-      style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px", fontFamily: "inherit" }}
-    >
+    <div style={{ maxWidth: "720px", margin: "0 auto", padding: "24px 16px", fontFamily: "inherit" }}>
       <div style={{ marginBottom: "40px", textAlign: "center" }}>
         <h1 style={{ margin: "0 0 8px", fontSize: "28px", fontWeight: "800", color: "#1a3c5e" }}>
           Get a Glass Estimate
@@ -511,15 +499,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
           </span>
           <span style={{ fontSize: "12px", color: "#6b7280" }}>{progressPercent}%</span>
         </div>
-        <div
-          style={{
-            height: "6px",
-            width: "100%",
-            background: "#e6eaef",
-            borderRadius: "999px",
-            overflow: "hidden",
-          }}
-        >
+        <div style={{ height: "6px", width: "100%", background: "#e6eaef", borderRadius: "999px", overflow: "hidden" }}>
           <div
             style={{
               height: "100%",

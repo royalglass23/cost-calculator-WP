@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-define('RG_DB_VERSION', '2.1.1');
+define('RG_DB_VERSION', '2.2.0');
 
 function rg_create_leads_table(): void {
     global $wpdb;
@@ -51,6 +51,9 @@ function rg_create_leads_table(): void {
     if (!in_array('consented_at', $existing, true)) {
         $wpdb->query("ALTER TABLE {$table} ADD COLUMN consented_at DATETIME NULL AFTER consent_given");
     }
+    if (!in_array('substrate', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN substrate VARCHAR(50) NOT NULL DEFAULT '' AFTER fixing_method");
+    }
 }
 
 // Run schema migrations automatically when any admin page loads and the DB version is stale.
@@ -89,6 +92,7 @@ function rg_save_lead(array $lead, array $answers, array $est): int {
             'corners'       => $a['corners'],
             'gates'         => $a['gates'],
             'fixing_method' => $a['fixingMethod'],
+            'substrate'     => $a['substrate'],
             'hardware'      => $a['hardwareFinish'],
             'est_low'       => $e['low'],
             'est_high'      => $e['high'],
@@ -98,7 +102,7 @@ function rg_save_lead(array $lead, array $answers, array $est): int {
             'consent_given' => $l['consentGiven'],
             'consented_at'  => $l['consentedAt'],
         ],
-        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%f','%f','%f','%d','%s','%d','%s']
+        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%s','%f','%f','%f','%d','%s','%d','%s']
     );
 
     return $result ? (int) $wpdb->insert_id : 0;
