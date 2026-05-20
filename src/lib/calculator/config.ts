@@ -2,10 +2,10 @@ import type { PricingConfig } from './types';
 
 export const DEFAULT_PRICING: PricingConfig = {
   scenarios: {
-    deck_pool_fence:    { ratePerMetre: 280, gatePrice: 680 },
+    ground_level:       { ratePerMetre: 280, gatePrice: null },
     balcony_balustrade: { ratePerMetre: 320, gatePrice: null },
     premium_pool_fence: { ratePerMetre: 380, gatePrice: 680 },
-    stair_balustrade:   { ratePerMetre: 330, gatePrice: 750 },
+    stair_balustrade:   { ratePerMetre: 330, gatePrice: null },
   },
   minimumLength: 5,
   cornerSurcharge: 85,
@@ -13,11 +13,21 @@ export const DEFAULT_PRICING: PricingConfig = {
     standard_chrome: 0,
     matte_black:     15,
     brushed_chrome:  12,
-    brass:           22,
-    custom:          0,
+    powder_coated:   22,
     not_sure:        0,
   },
-  rangeLowPercent: 90,
+  glassTypeSurcharge: {
+    toughened_12mm: 0,
+    laminated:      0,  // placeholder — set via WP admin
+  },
+  glassColourSurcharge: {
+    clear:    0,
+    low_iron: 0,  // placeholder — set via WP admin
+    tinted:   0,  // placeholder — set via WP admin
+    frosted:  0,
+  },
+  interlikingRailsSurcharge: 0,  // placeholder — set via WP admin
+  rangeLowPercent:  90,
   rangeHighPercent: 120,
 };
 
@@ -53,18 +63,29 @@ function getPluginBase(): string {
 const BASE = getPluginBase();
 const img = (name: string) => BASE + name;
 
-// These filenames are from the existing assets folder in the plugin
-// D:\Royal Glass Dev\cost-calculator-WP\wordpress-plugin\rg-calculator\assets\
 export const IMAGES = {
   // Scenario cards
-  deck: img('use-deck.jpg'),
-  pool: img('use-pool.jpg'),
+  groundLevel: img('use-deck.jpg'),
+  balcony:     img('use-balcony.jpg'),
+  pool:        img('use-pool.jpg'),
+  stairs:      img('use-stairs.jpg'),
 
   // Corners helper
   corners: img('feature-corner.jpg'),
 
   // Gates helper
   gates: img('feature-gate.jpg'),
+
+  // Glass type
+  toughened: img('glass-12mm.jpg'),
+  laminated: img('glass-laminated.jpg'),
+
+  // Glass colour
+  colourClear:   img('clarity-standard.jpg'),
+  colourLowIron: img('clarity-lowiron.jpg'),
+  colourTinted:  img('clarity-tinted.jpg'),
+  colourCustom:  img('finish-custom.jpg'),
+  colourFrosted: img('finish-custom.jpg'),
 
   // Fixing method
   spigots:       img('fix-spigots.jpg'),
@@ -76,6 +97,7 @@ export const IMAGES = {
   matteBlack:    img('finish-black.jpg'),
   brushedChrome: img('finish-brushed.jpg'),
   brass:         img('finish-brass.jpg'),
+  powderCoated:  img('finish-brass.jpg'),
   finishCustom:  img('finish-custom.jpg'),
   notSure:       img('not-sure.jpg'),
 };

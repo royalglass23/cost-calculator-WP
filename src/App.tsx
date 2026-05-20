@@ -9,8 +9,12 @@ import { ResultScreen } from './components/wizard/ResultScreen';
 const INITIAL_ANSWERS: WizardAnswers = {
   scenario: null,
   length: 10,
+  landingLength: 0,
   corners: 0,
   gates: 0,
+  glassType: null,
+  glassColour: 'clear',
+  interlikingRails: false,
   fixingMethod: null,
   hardwareFinish: null,
   callTriggers: [],
@@ -91,13 +95,15 @@ export default function App() {
   // Lead capture — shown when user clicks "Get my estimate"
   if (showLeadCapture) {
     return (
-      <LeadCapture
-        answers={answers}
-        estimate={estimate}
-        loadedAt={loadedAt.current}
-        onSuccess={handleLeadSuccess}
-        onBack={() => setShowLeadCapture(false)}
-      />
+      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '24px 16px', fontFamily: 'inherit' }}>
+        <LeadCapture
+          answers={answers}
+          estimate={estimate}
+          loadedAt={loadedAt.current}
+          onSuccess={handleLeadSuccess}
+          onBack={() => setShowLeadCapture(false)}
+        />
+      </div>
     );
   }
 

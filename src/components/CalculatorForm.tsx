@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import type {
   WizardAnswers,
   Scenario,
+  GlassType,
+  GlassColour,
   FixingMethod,
   HardwareFinish,
 } from "../lib/calculator/types";
 import { IMAGES } from "../lib/calculator/config";
-import { SelectionCard, SliderInput, StepNote, ComplianceWarning } from "./wizard/steps/shared";
+import { SelectionCard, SliderInput, StepNote, ComplianceWarning, StepHero } from "./wizard/steps/shared";
 
 interface Props {
   answers: WizardAnswers;
@@ -54,28 +56,73 @@ function Section({
 
 const SCENARIOS: Array<{ value: Scenario; title: string; description: string; image: string }> = [
   {
-    value: "deck_pool_fence",
-    title: "Deck Pool Fence",
-    description: "Ground-level pool or outdoor area - <=1m height - $280/m",
-    image: IMAGES.pool,
+    value: "ground_level",
+    title: "Ground Level Fence",
+    description: "Outdoor area or pool — height ≤1m — standard residential",
+    image: IMAGES.groundLevel,
   },
   {
     value: "balcony_balustrade",
     title: "Balcony / Patio Balustrade",
-    description: "Elevated deck, balcony or patio - >1m height - $320/m",
-    image: IMAGES.deck,
+    description: "Elevated deck, balcony or patio — height >1m (NZBC 1m minimum)",
+    image: IMAGES.balcony,
   },
   {
     value: "premium_pool_fence",
     title: "Premium Pool Fence",
-    description: "High-spec pool fencing - NZ Pool Safety Act - $380/m",
+    description: "Pool barrier — NZ Pool Safety Act — 1.2m minimum height",
     image: IMAGES.pool,
   },
   {
     value: "stair_balustrade",
     title: "Stair Balustrade",
-    description: "Glass panels along stairs - NZBC Stair Safety Code - $330/m",
-    image: IMAGES.deck,
+    description: "Glass panels along stairs — NZBC stair safety code",
+    image: IMAGES.stairs,
+  },
+];
+
+const GLASS_TYPES: Array<{ value: GlassType; title: string; description: string; image: string; badge?: string }> = [
+  {
+    value: "toughened_12mm",
+    title: "12mm Toughened + Capping",
+    description: "Standard for balconies and stairs — durable, NZBC compliant",
+    image: IMAGES.toughened,
+    badge: "STANDARD",
+  },
+  {
+    value: "laminated",
+    title: "Laminated Glass",
+    description: "No capping required — holds together if broken, suits certain designs",
+    image: IMAGES.laminated,
+    badge: "PREMIUM",
+  },
+];
+
+const GLASS_COLOURS: Array<{ value: GlassColour; title: string; description: string; image: string; badge?: string }> = [
+  {
+    value: "clear",
+    title: "Clear",
+    description: "Standard clear glass — included in base price",
+    image: IMAGES.colourClear,
+    badge: "STANDARD",
+  },
+  {
+    value: "tinted",
+    title: "Tinted Glass",
+    description: "Grey, bronze, or blue-green — privacy and style",
+    image: IMAGES.colourTinted,
+  },
+  {
+    value: "frosted",
+    title: "Frosted Glass",
+    description: "Diffused light, privacy without full opacity",
+    image: IMAGES.colourFrosted,
+  },
+  {
+    value: "low_iron",
+    title: "Low Iron / Ultra-Clear",
+    description: "Minimal green tint — truer colour transparency",
+    image: IMAGES.colourLowIron,
   },
 ];
 
@@ -88,7 +135,7 @@ const FIXING_OPTIONS: Array<{
   {
     value: "spigots",
     title: "Spigots",
-    description: "Round or square posts drilled into the floor - most common",
+    description: "Round or square posts drilled into the floor — most common",
     image: IMAGES.spigots,
   },
   {
@@ -100,7 +147,7 @@ const FIXING_OPTIONS: Array<{
   {
     value: "hidden_channel",
     title: "Hidden Channel",
-    description: "Glass appears to float - recessed channel in the floor",
+    description: "Glass appears to float — recessed channel in the floor",
     image: IMAGES.hiddenChannel,
   },
   {
@@ -120,9 +167,10 @@ const FINISH_OPTIONS: Array<{
 }> = [
   {
     value: "standard_chrome",
-    title: "Standard Chrome",
+    title: "Chrome",
     description: "Included in base price",
     image: IMAGES.chrome,
+    badge: "STANDARD",
   },
   {
     value: "matte_black",
@@ -139,10 +187,10 @@ const FINISH_OPTIONS: Array<{
     surcharge: "+$12/m",
   },
   {
-    value: "brass",
-    title: "Brass",
-    description: "Premium - suits modern/luxury",
-    image: IMAGES.brass,
+    value: "powder_coated",
+    title: "Powder Coated",
+    description: "Durable colour coating — range of colours available",
+    image: IMAGES.powderCoated,
     surcharge: "+$22/m",
   },
   {
@@ -153,37 +201,50 @@ const FINISH_OPTIONS: Array<{
   },
 ];
 
-const CALL_TRIGGERS = [
-  { id: "upper_floor", label: "Upper floor installation (first floor or higher)" },
-  { id: "scaffold", label: "Scaffold or elevated access required" },
-  { id: "high_rise", label: "High-rise building (3+ floors)" },
-  { id: "hard_access", label: "Difficult or long-carry site access" },
-  { id: "custom_glass", label: "Custom or curved glass required" },
-  { id: "custom_colour", label: "Custom colour hardware (powder coat / RAL)" },
-];
-
 export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
   const [activeStep, setActiveStep] = useState(0);
-  const gatesHidden = answers.scenario === "balcony_balustrade";
-  const gatesMandatory = answers.scenario === "premium_pool_fence";
+
+  const gatesHidden     = answers.scenario !== "premium_pool_fence";
+  const glassTypeHidden = answers.scenario === "ground_level" || answers.scenario === "premium_pool_fence";
+  const cornersHidden   = answers.scenario === "stair_balustrade";
 
   function handleScenarioChange(value: Scenario) {
     const updates: Partial<WizardAnswers> = { scenario: value };
-    if (value === "premium_pool_fence" && answers.gates === 0) updates.gates = 1;
-    if (value === "balcony_balustrade") updates.gates = 0;
+    if (value === "stair_balustrade") {
+      updates.gates = 0;
+      updates.corners = 0;
+      updates.glassType = null;
+    } else if (value === "premium_pool_fence") {
+      if (answers.gates === 0) updates.gates = 1;
+      // pool fence uses assumed 12mm toughened — glass type step not shown
+      updates.glassType = "toughened_12mm";
+      updates.interlikingRails = false;
+      updates.landingLength = 0;
+    } else if (value === "ground_level") {
+      updates.gates = 0;
+      // ground level uses assumed 12mm toughened — glass type step not shown
+      updates.glassType = "toughened_12mm";
+      updates.interlikingRails = false;
+      updates.landingLength = 0;
+    } else {
+      // balcony_balustrade
+      updates.gates = 0;
+      updates.glassType = null;
+      updates.landingLength = 0;
+    }
     onChange(updates);
   }
 
-  function toggleCallTrigger(id: string) {
-    const current = answers.callTriggers;
-    const updated = current.includes(id)
-      ? current.filter((trigger) => trigger !== id)
-      : [...current, id];
-    onChange({ callTriggers: updated });
+  function handleGlassTypeChange(value: GlassType) {
+    const updates: Partial<WizardAnswers> = { glassType: value };
+    if (value === "toughened_12mm") {
+      // toughened: interlinking rails are mandatory
+      updates.interlikingRails = true;
+    } else if (value === "laminated") {
+      updates.interlikingRails = false;
+    }
+    onChange(updates);
   }
-
-  const canGetEstimate =
-    answers.scenario !== null && answers.fixingMethod !== null && answers.hardwareFinish !== null;
 
   const steps = [
     {
@@ -211,55 +272,67 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       canContinue: true,
       content: (
         <>
-          <SliderInput
-            label="Metres"
-            value={answers.length}
-            min={1}
-            max={100}
-            step={1}
-            unit="m"
-            onChange={(value) => onChange({ length: value })}
-          />
-          {answers.length < 5 && (
-            <StepNote>Minimum job is 5 m - shorter runs are charged as 5 m.</StepNote>
+          <StepHero src={IMAGES.balcony} alt="Glass fencing project" />
+          {answers.scenario === "stair_balustrade" ? (
+            <>
+              <SliderInput
+                label="Stair run"
+                value={answers.length}
+                min={1}
+                max={100}
+                step={1}
+                unit="m"
+                onChange={(value) => onChange({ length: value })}
+              />
+              <SliderInput
+                label="Landing area"
+                value={answers.landingLength}
+                min={0}
+                max={50}
+                step={1}
+                unit="m"
+                onChange={(value) => onChange({ landingLength: value })}
+              />
+              <StepNote>Total {answers.length + answers.landingLength}m will be priced</StepNote>
+            </>
+          ) : (
+            <>
+              <SliderInput
+                label="Metres"
+                value={answers.length}
+                min={1}
+                max={100}
+                step={1}
+                unit="m"
+                onChange={(value) => onChange({ length: value })}
+              />
+              {answers.length < 5 && (
+                <StepNote>Minimum job is 5 m — shorter runs are charged as 5 m.</StepNote>
+              )}
+            </>
           )}
         </>
       ),
     },
-    {
+    ...(!cornersHidden ? [{
       title: "How many corners?",
       canContinue: true,
       content: (
         <>
-          <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: "220px" }}>
-              <SliderInput
-                label="Corners"
-                value={answers.corners}
-                min={0}
-                max={10}
-                step={1}
-                unit=""
-                onChange={(value) => onChange({ corners: value })}
-              />
-            </div>
-            <img
-              src={IMAGES.corners}
-              alt="How to count corners"
-              style={{
-                width: "120px",
-                height: "120px",
-                objectFit: "cover",
-                borderRadius: "12px",
-                flexShrink: 0,
-              }}
-              loading="lazy"
-            />
-          </div>
-          <StepNote>Count every 90 degree turn in the glass run. Each corner adds $85.</StepNote>
+          <StepHero src={IMAGES.corners} alt="How to count corners" />
+          <SliderInput
+            label="Corners"
+            value={answers.corners}
+            min={0}
+            max={10}
+            step={1}
+            unit=""
+            onChange={(value) => onChange({ corners: value })}
+          />
+          <StepNote>Count every 90° turn in the glass run.</StepNote>
         </>
       ),
-    },
+    }] : []),
     ...(!gatesHidden
       ? [
           {
@@ -276,15 +349,15 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
                   unit=""
                   onChange={(value) => onChange({ gates: value })}
                 />
-                {gatesMandatory && (
+                <StepNote>
+                  NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool fences.
+                </StepNote>
+                <StepNote>
+                  We use high-quality stainless steel gate hardware on all pool fence installations.
+                </StepNote>
+                {answers.gates === 0 && (
                   <ComplianceWarning>
-                    NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool
-                    fences.
-                  </ComplianceWarning>
-                )}
-                {gatesMandatory && answers.gates === 0 && (
-                  <ComplianceWarning>
-                    You've set 0 gates - this doesn't meet NZ Pool Safety Act requirements.
+                    You've set 0 gates — this may not meet NZ Pool Safety Act requirements. If access is via another compliant barrier (e.g. a locked door), zero gates is acceptable.
                   </ComplianceWarning>
                 )}
               </>
@@ -292,13 +365,71 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
           },
         ]
       : []),
+    ...(!glassTypeHidden
+      ? [
+          {
+            title: "Glass type",
+            canContinue: answers.glassType !== null,
+            content: (
+              <>
+                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
+                  Toughened glass includes a capping rail at the top. Laminated glass bonds two layers and needs no capping.
+                </p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    gap: "12px",
+                  }}
+                >
+                  {GLASS_TYPES.map((opt) => (
+                    <SelectionCard
+                      key={opt.value}
+                      image={opt.image}
+                      title={opt.title}
+                      description={opt.description}
+                      selected={answers.glassType === opt.value}
+                      onSelect={() => handleGlassTypeChange(opt.value)}
+                      badge={opt.badge}
+                    />
+                  ))}
+                </div>
+              </>
+            ),
+          },
+        ]
+      : []),
+    {
+      title: "Glass colour",
+      canContinue: true,
+      content: (
+        <>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}
+          >
+            {GLASS_COLOURS.map((opt) => (
+              <SelectionCard
+                key={opt.value}
+                image={opt.image}
+                title={opt.title}
+                description={opt.description}
+                selected={answers.glassColour === opt.value}
+                onSelect={() => onChange({ glassColour: opt.value as GlassColour })}
+                badge={opt.badge}
+                compact
+              />
+            ))}
+          </div>
+        </>
+      ),
+    },
     {
       title: "How will the glass be fixed?",
       canContinue: answers.fixingMethod !== null,
       content: (
         <>
           <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
-            This is a preference - no price impact. Our team will confirm suitability on site.
+            This is a preference — no price impact. Our team will confirm suitability on site.
           </p>
           <div
             style={{
@@ -334,76 +465,14 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
               key={option.value}
               image={option.image}
               title={option.title}
-              description={`${option.description}${option.surcharge ? ` - ${option.surcharge}` : ""}`}
+              description={`${option.description}${option.surcharge ? ` — ${option.surcharge}` : ""}`}
               selected={answers.hardwareFinish === option.value}
               onSelect={() => onChange({ hardwareFinish: option.value })}
+              badge={option.badge}
               compact
             />
           ))}
         </div>
-      ),
-    },
-    {
-      title: "Any of these apply to your site?",
-      canContinue: canGetEstimate,
-      content: (
-        <>
-          <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
-            Tick anything that applies. These situations need a site visit before we can quote
-            accurately.
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {CALL_TRIGGERS.map((trigger) => (
-              <label
-                key={trigger.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  border: `1px solid ${answers.callTriggers.includes(trigger.id) ? "#1a3c5e" : "#e6eaef"}`,
-                  background: answers.callTriggers.includes(trigger.id) ? "#f0f4f8" : "white",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  color: "#1a3c5e",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={answers.callTriggers.includes(trigger.id)}
-                  onChange={() => toggleCallTrigger(trigger.id)}
-                  style={{ width: "18px", height: "18px", accentColor: "#1a3c5e", flexShrink: 0 }}
-                />
-                {trigger.label}
-              </label>
-            ))}
-          </div>
-          {answers.callTriggers.length > 0 && (
-            <ComplianceWarning>
-              One or more of your site conditions requires a custom quote. Royal Glass will contact
-              you to confirm the final price.
-            </ComplianceWarning>
-          )}
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              padding: "16px 20px",
-              marginTop: "24px",
-              fontSize: "13px",
-              color: "#64748b",
-              lineHeight: "1.6",
-            }}
-          >
-            <strong style={{ color: "#1a3c5e" }}>This estimate assumes:</strong> toughened 12mm
-            glass, timber or concrete substrate, NZ standard height for selected scenario,
-            ground-level access, and straight panels. If any of these do not apply, call Royal Glass
-            for a custom quote. <strong>Excludes:</strong> GST, site clearance, council permits, and
-            scaffolding.
-          </div>
-        </>
       ),
     },
   ];
@@ -509,7 +578,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
             fontWeight: "700",
           }}
         >
-          {isLastStep ? "Continue - Enter Your Details" : "Continue"}
+          {isLastStep ? "Continue — Enter Your Details" : "Continue"}
         </button>
       </div>
     </div>
