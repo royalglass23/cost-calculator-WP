@@ -37,9 +37,17 @@ const FIXING_LABELS: Record<string, string> = {
   not_sure:       'To be confirmed',
 };
 
+const SUBSTRATE_LABELS: Record<string, string> = {
+  timber:   'Timber',
+  concrete: 'Concrete',
+  tile:     'Tile',
+  steel:    'Steel',
+  not_sure: 'To be confirmed',
+};
+
 const FINISH_LABELS: Record<string, string> = {
-  standard_chrome: 'Standard chrome',
-  matte_black:     'Matte black',
+  standard_chrome: 'Chrome',
+  matte_black:     'Matt black',
   brushed_chrome:  'Brushed chrome',
   powder_coated:   'Powder coated',
   not_sure:        'To be confirmed',
@@ -107,12 +115,28 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', margin: '12px 0' }}>
             <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.low)}</span>
+
             <span style={{ fontSize: '24px', color: '#93c5fd' }}>–</span>
             <span style={{ fontSize: '36px', fontWeight: 700 }}>{formatNZD(estimate.high)}</span>
           </div>
           <p style={{ fontSize: '13px', color: '#93c5fd', margin: 0 }}>
             Excluding GST · Based on {estimate.effectiveLength}m effective length
           </p>
+        </div>
+      )}
+
+            {/* Amber consultation bar */}
+            {estimate.consultationFlags.length > 0 && (
+        <div style={{
+          background: '#fff8ef', border: '1px solid #f59e0b', borderRadius: '12px',
+          padding: '16px 20px', marginBottom: '20px',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400e', margin: '0 0 8px' }}>
+            Our team will confirm the following at the site visit:
+          </p>
+          {estimate.consultationFlags.map((flag) => (
+            <p key={flag} style={{ fontSize: '13px', color: '#78350f', margin: '0 0 3px 0' }}>· {flag}</p>
+          ))}
         </div>
       )}
 
@@ -130,6 +154,7 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
             ['Glass type',      GLASS_TYPE_LABELS[answers.glassType ?? 'toughened_12mm'] ?? ''],
             ['Glass colour',    GLASS_COLOUR_LABELS[answers.glassColour] ?? ''],
             ['Fixing method',   FIXING_LABELS[answers.fixingMethod ?? ''] ?? ''],
+            ['Substrate',       SUBSTRATE_LABELS[answers.substrate ?? ''] ?? ''],
             ['Hardware finish', FINISH_LABELS[answers.hardwareFinish ?? ''] ?? ''],
           ] as [string, string][]).map(([k, v]) => (
             <React.Fragment key={k}>
