@@ -30,23 +30,26 @@ function rg_register_routes() {
 
 function rg_get_pricing(): WP_REST_Response {
     $defaults = [
-        'ratePerMetre'               => 500,
-        'minimumLength'              => 5,
-        'gatePrice'                  => 1100,
-        'cornerSurcharge'            => 150,
-        'hardwareSurchargePerMetre'  => 50,
-        'hardwareMinimumSurcharge'   => 250,
-        'rangeLowPercent'            => 90,
-        'rangeHighPercent'           => 120,
+        'scenarios' => [
+            'ground_level'       => ['ratePerMetre' => 280, 'gatePrice' => null],
+            'balcony_balustrade' => ['ratePerMetre' => 320, 'gatePrice' => null],
+            'premium_pool_fence' => ['ratePerMetre' => 380, 'gatePrice' => 680],
+            'stair_balustrade'   => ['ratePerMetre' => 330, 'gatePrice' => null],
+        ],
+        'minimumLength'            => 5,
+        'cornerSurcharge'          => 85,
+        'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
+        'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
+        'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
+        'interlikingRailsSurcharge' => 0,
+        'rangeLowPercent'          => 90,
+        'rangeHighPercent'         => 120,
     ];
 
     $saved = get_option('rg_calculator_pricing', []);
-    $pricing = array_merge($defaults, is_array($saved) ? $saved : []);
-
-    // Cast to numbers
-    foreach ($pricing as $key => $val) {
-        $pricing[$key] = (float) $val;
-    }
+    $pricing = (!empty($saved['scenarios']) && !empty($saved['hardwareFinishSurcharge']))
+        ? array_replace_recursive($defaults, $saved)
+        : $defaults;
 
     return new WP_REST_Response($pricing, 200);
 }
