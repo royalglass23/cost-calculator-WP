@@ -17,6 +17,7 @@ export function calculateEstimate(
       low: 0,
       high: 0,
       needsCallUs: answers.callTriggers.length > 0,
+      consultationFlags: [],
       breakdown: { base: 0, gates: 0, corners: 0, hardwareSurcharge: 0, glassTypeSurcharge: 0, glassColourSurcharge: 0, interlikingRails: 0 },
     };
   }
@@ -51,6 +52,10 @@ export function calculateEstimate(
 
   const low  = roundToNearest(subtotal * (pricing.rangeLowPercent  / 100));
   const high = roundToNearest(subtotal * (pricing.rangeHighPercent / 100));
+  const consultationFlags: string[] = [];
+    if (answers.fixingMethod === 'not_sure')   consultationFlags.push('Fixing method to be confirmed on site');
+    if (answers.hardwareFinish === 'not_sure') consultationFlags.push('Hardware finish to be confirmed');
+    if (answers.substrate === 'not_sure')      consultationFlags.push('Substrate to be confirmed on site');
 
   return {
     effectiveLength,
@@ -58,6 +63,7 @@ export function calculateEstimate(
     low,
     high,
     needsCallUs: answers.callTriggers.length > 0,
+    consultationFlags, 
     breakdown: { base, gates, corners, hardwareSurcharge, glassTypeSurcharge, glassColourSurcharge, interlikingRails },
   };
 }
