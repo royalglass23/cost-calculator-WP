@@ -7,6 +7,7 @@ export type Scenario =
 export type GlassType = 'toughened_12mm' | 'laminated';
 export type GlassColour = 'clear' | 'low_iron' | 'tinted' | 'frosted';
 export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'not_sure';
+export type SubstrateType = 'timber' | 'concrete' | 'tile' | 'steel' | 'not_sure';
 
 export type HardwareFinish =
   | 'standard_chrome'
@@ -28,6 +29,7 @@ export interface WizardAnswers {
   glassColour: GlassColour;
   interlikingRails: boolean;
   fixingMethod: FixingMethod | null;
+  substrate: SubstrateType | null;
   hardwareFinish: HardwareFinish | null;
   callTriggers: string[];
 }
@@ -67,6 +69,7 @@ export interface EstimateResult {
   low: number;
   high: number;
   needsCallUs: boolean;
+  consultationFlags: string[];
   breakdown: {
     base: number;
     gates: number;
