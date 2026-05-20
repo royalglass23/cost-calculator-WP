@@ -11572,10 +11572,10 @@ function gm() {
 const vm = gm(),
   Ll = (m) => vm + m,
   Ul = {
-    groundLevel: Ll("use-deck.jpg"),
-    balcony: Ll("use-balcony.jpg"),
-    pool: Ll("use-pool.jpg"),
-    stairs: Ll("use-stairs.jpg"),
+    groundLevel: Ll("use-deck.webp"),
+    balcony: Ll("use-balcony.webp"),
+    pool: Ll("use-pool.webp"),
+    stairs: Ll("use-stairs.webp"),
     corners: Ll("feature-corner.jpg"),
     toughened: Ll("glass-12mm.jpg"),
     laminated: Ll("glass-laminated.jpg"),
@@ -13437,7 +13437,6 @@ function Gm({ answers: m, estimate: C, leadId: B, email: d, firstName: U }) {
             "12mm Thickness",
             "Straight panels — no curved glass",
             "Ground-level access",
-            "Timber or concrete substrate",
             "NZ standard height for selected scenario",
           ].map((K) =>
             s.jsxs(
