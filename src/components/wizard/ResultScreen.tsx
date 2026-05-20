@@ -12,10 +12,22 @@ interface Props {
 }
 
 const SCENARIO_LABELS: Record<string, string> = {
-  deck_pool_fence:    'Deck Pool Fence',
+  ground_level:       'Ground Level Fence',
   balcony_balustrade: 'Balcony / Patio Balustrade',
   premium_pool_fence: 'Premium Pool Fence',
   stair_balustrade:   'Stair Balustrade',
+};
+
+const GLASS_TYPE_LABELS: Record<string, string> = {
+  toughened_12mm: '12mm Toughened + Capping',
+  laminated:      'Laminated (no capping)',
+};
+
+const GLASS_COLOUR_LABELS: Record<string, string> = {
+  clear:    'Clear',
+  low_iron: 'Low Iron / Ultra-Clear',
+  tinted:   'Tinted',
+  frosted:  'Frosted Glass',
 };
 
 const FIXING_LABELS: Record<string, string> = {
@@ -29,8 +41,7 @@ const FINISH_LABELS: Record<string, string> = {
   standard_chrome: 'Standard chrome',
   matte_black:     'Matte black',
   brushed_chrome:  'Brushed chrome',
-  brass:           'Brass',
-  custom:          'Custom',
+  powder_coated:   'Powder coated',
   not_sure:        'To be confirmed',
 };
 
@@ -111,9 +122,13 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: '14px' }}>
           {([
             ['Scenario',        SCENARIO_LABELS[answers.scenario ?? ''] ?? ''],
-            ['Length',          `${answers.length}m`],
+            ...(answers.scenario === 'stair_balustrade'
+              ? [['Stair run', `${answers.length}m`] as [string, string], ['Landing area', `${answers.landingLength}m`] as [string, string]]
+              : [['Length', `${answers.length}m`] as [string, string]]),
             ['Corners',         `${answers.corners}`],
-            ['Gates',           answers.scenario === 'balcony_balustrade' ? 'N/A' : `${answers.gates}`],
+            ['Gates',           answers.scenario === 'premium_pool_fence' ? `${answers.gates}` : 'N/A'],
+            ['Glass type',      GLASS_TYPE_LABELS[answers.glassType ?? 'toughened_12mm'] ?? ''],
+            ['Glass colour',    GLASS_COLOUR_LABELS[answers.glassColour] ?? ''],
             ['Fixing method',   FIXING_LABELS[answers.fixingMethod ?? ''] ?? ''],
             ['Hardware finish', FINISH_LABELS[answers.hardwareFinish ?? ''] ?? ''],
           ] as [string, string][]).map(([k, v]) => (
@@ -129,7 +144,6 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
       <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginTop: 0, marginBottom: '8px' }}>This estimate assumes:</h3>
         {[
-          'Toughened 12mm clear glass',
           'Straight panels — no curved glass',
           'Ground-level access',
           'Timber or concrete substrate',

@@ -5,9 +5,11 @@ export function calculateEstimate(
   answers: WizardAnswers,
   pricing: PricingConfig = DEFAULT_PRICING
 ): EstimateResult {
-  const effectiveLength = Math.max(answers.length, pricing.minimumLength);
+  const totalInputLength = answers.scenario === 'stair_balustrade'
+    ? answers.length + (answers.landingLength ?? 0)
+    : answers.length;
+  const effectiveLength = Math.max(totalInputLength, pricing.minimumLength);
 
-  // If no scenario selected yet, return zeroed result
   if (!answers.scenario) {
     return {
       effectiveLength,
@@ -15,34 +17,39 @@ export function calculateEstimate(
       low: 0,
       high: 0,
       needsCallUs: answers.callTriggers.length > 0,
-      breakdown: { base: 0, gates: 0, corners: 0, hardwareSurcharge: 0 },
+      breakdown: { base: 0, gates: 0, corners: 0, hardwareSurcharge: 0, glassTypeSurcharge: 0, glassColourSurcharge: 0, interlikingRails: 0 },
     };
   }
 
   const scenarioPricing = pricing.scenarios[answers.scenario];
 
-  // Base: length × scenario rate
   const base = effectiveLength * scenarioPricing.ratePerMetre;
 
-  // Gates: only if the scenario supports them (gatePrice !== null)
   const gates =
     scenarioPricing.gatePrice !== null
       ? answers.gates * scenarioPricing.gatePrice
       : 0;
 
-  // Corners
   const corners = answers.corners * pricing.cornerSurcharge;
 
-  // Hardware surcharge — per-finish rate, no minimum
   const finishSurchargePerMetre =
     pricing.hardwareFinishSurcharge[answers.hardwareFinish ?? 'standard_chrome'] ?? 0;
   const hardwareSurcharge = effectiveLength * finishSurchargePerMetre;
 
-  const subtotal = base + gates + corners + hardwareSurcharge;
+  const glassTypeSurcharge =
+    effectiveLength * (pricing.glassTypeSurcharge[answers.glassType ?? 'toughened_12mm'] ?? 0);
+
+  const glassColourSurcharge =
+    effectiveLength * (pricing.glassColourSurcharge[answers.glassColour] ?? 0);
+
+  const interlikingRails =
+    answers.interlikingRails ? effectiveLength * pricing.interlikingRailsSurcharge : 0;
+
+  const subtotal = base + gates + corners + hardwareSurcharge + glassTypeSurcharge + glassColourSurcharge + interlikingRails;
 
   const roundToNearest = (n: number, to = 50) => Math.round(n / to) * to;
 
-  const low = roundToNearest(subtotal * (pricing.rangeLowPercent / 100));
+  const low  = roundToNearest(subtotal * (pricing.rangeLowPercent  / 100));
   const high = roundToNearest(subtotal * (pricing.rangeHighPercent / 100));
 
   return {
@@ -51,7 +58,7 @@ export function calculateEstimate(
     low,
     high,
     needsCallUs: answers.callTriggers.length > 0,
-    breakdown: { base, gates, corners, hardwareSurcharge },
+    breakdown: { base, gates, corners, hardwareSurcharge, glassTypeSurcharge, glassColourSurcharge, interlikingRails },
   };
 }
 

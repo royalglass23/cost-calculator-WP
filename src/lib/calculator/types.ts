@@ -1,17 +1,18 @@
 export type Scenario =
-  | 'deck_pool_fence'
+  | 'ground_level'
   | 'balcony_balustrade'
   | 'premium_pool_fence'
   | 'stair_balustrade';
 
+export type GlassType = 'toughened_12mm' | 'laminated';
+export type GlassColour = 'clear' | 'low_iron' | 'tinted' | 'frosted';
 export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'not_sure';
 
 export type HardwareFinish =
   | 'standard_chrome'
   | 'matte_black'
   | 'brushed_chrome'
-  | 'brass'
-  | 'custom'
+  | 'powder_coated'
   | 'not_sure';
 
 export type CustomerType = 'homeowner' | 'builder' | 'architect' | 'developer' | 'other';
@@ -20,8 +21,12 @@ export type Timeframe = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months' |
 export interface WizardAnswers {
   scenario: Scenario | null;
   length: number;
+  landingLength: number;
   corners: number;
   gates: number;
+  glassType: GlassType | null;
+  glassColour: GlassColour;
+  interlikingRails: boolean;
   fixingMethod: FixingMethod | null;
   hardwareFinish: HardwareFinish | null;
   callTriggers: string[];
@@ -49,6 +54,9 @@ export interface PricingConfig {
   minimumLength: number;
   cornerSurcharge: number;
   hardwareFinishSurcharge: Record<HardwareFinish, number>;
+  glassTypeSurcharge: Record<GlassType, number>;
+  glassColourSurcharge: Record<GlassColour, number>;
+  interlikingRailsSurcharge: number;
   rangeLowPercent: number;
   rangeHighPercent: number;
 }
@@ -64,6 +72,9 @@ export interface EstimateResult {
     gates: number;
     corners: number;
     hardwareSurcharge: number;
+    glassTypeSurcharge: number;
+    glassColourSurcharge: number;
+    interlikingRails: number;
   };
 }
 
