@@ -1,12 +1,22 @@
 import type { PricingConfig } from './types';
 
 export const DEFAULT_PRICING: PricingConfig = {
-  ratePerMetre: 500,
+  scenarios: {
+    deck_pool_fence:    { ratePerMetre: 280, gatePrice: 680 },
+    balcony_balustrade: { ratePerMetre: 320, gatePrice: null },
+    premium_pool_fence: { ratePerMetre: 380, gatePrice: 680 },
+    stair_balustrade:   { ratePerMetre: 330, gatePrice: 750 },
+  },
   minimumLength: 5,
-  gatePrice: 1100,
-  cornerSurcharge: 150,
-  hardwareSurchargePerMetre: 50,
-  hardwareMinimumSurcharge: 250,
+  cornerSurcharge: 85,
+  hardwareFinishSurcharge: {
+    standard_chrome: 0,
+    matte_black:     15,
+    brushed_chrome:  12,
+    brass:           22,
+    custom:          0,
+    not_sure:        0,
+  },
   rangeLowPercent: 90,
   rangeHighPercent: 120,
 };
@@ -46,26 +56,22 @@ const img = (name: string) => BASE + name;
 // These filenames are from the existing assets folder in the plugin
 // D:\Royal Glass Dev\cost-calculator-WP\wordpress-plugin\rg-calculator\assets\
 export const IMAGES = {
-  // Step 1 — project type (from original Cloudflare Workers build)
-  deck:      img('use-deck.jpg'),
-  pool:      img('use-pool.jpg'),
+  // Scenario cards
+  deck: img('use-deck.jpg'),
+  pool: img('use-pool.jpg'),
 
-  // Step 3 — height context
-  heightBalustrade: img('height-1-0.jpg'),
-  heightPoolFence:  img('height-1-2.jpg'),
-
-  // Step 4 — corners
+  // Corners helper
   corners: img('feature-corner.jpg'),
 
-  // Step 5 — gates
+  // Gates helper
   gates: img('feature-gate.jpg'),
 
-  // Step 6 — fixing method
-  spigots:      img('fix-spigots.jpg'),
-  standoff:     img('fix-standoff.jpg'),
+  // Fixing method
+  spigots:       img('fix-spigots.jpg'),
+  standoff:      img('fix-standoff.jpg'),
   hiddenChannel: img('fix-channel.jpg'),
 
-  // Step 7 — hardware finish
+  // Hardware finish
   chrome:        img('finish-chrome.jpg'),
   matteBlack:    img('finish-black.jpg'),
   brushedChrome: img('finish-brushed.jpg'),

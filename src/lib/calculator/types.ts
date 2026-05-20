@@ -1,11 +1,8 @@
-export type ProjectType = 'balustrade' | 'pool_fence';
-
-export type HeightOption =
-  | 'standard_1m'
-  | 'less_than_1m'
-  | 'not_sure'
-  | 'standard_1_2m'
-  | 'custom';
+export type Scenario =
+  | 'deck_pool_fence'
+  | 'balcony_balustrade'
+  | 'premium_pool_fence'
+  | 'stair_balustrade';
 
 export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'not_sure';
 
@@ -21,13 +18,13 @@ export type CustomerType = 'homeowner' | 'builder' | 'architect' | 'developer' |
 export type Timeframe = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months' | 'just_planning';
 
 export interface WizardAnswers {
-  projectType: ProjectType | null;
+  scenario: Scenario | null;
   length: number;
-  height: HeightOption | null;
   corners: number;
   gates: number;
   fixingMethod: FixingMethod | null;
   hardwareFinish: HardwareFinish | null;
+  callTriggers: string[];
 }
 
 export interface LeadData {
@@ -42,16 +39,16 @@ export interface LeadData {
   marketingConsent: boolean;
 }
 
-// 1-7 = wizard, 9 = lead capture, 8 = results
-export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export interface ScenarioPricing {
+  ratePerMetre: number;
+  gatePrice: number | null;
+}
 
 export interface PricingConfig {
-  ratePerMetre: number;
+  scenarios: Record<Scenario, ScenarioPricing>;
   minimumLength: number;
-  gatePrice: number;
   cornerSurcharge: number;
-  hardwareSurchargePerMetre: number;
-  hardwareMinimumSurcharge: number;
+  hardwareFinishSurcharge: Record<HardwareFinish, number>;
   rangeLowPercent: number;
   rangeHighPercent: number;
 }
@@ -61,8 +58,7 @@ export interface EstimateResult {
   subtotal: number;
   low: number;
   high: number;
-  needsConsultation: boolean;
-  consultationReasons: string[];
+  needsCallUs: boolean;
   breakdown: {
     base: number;
     gates: number;

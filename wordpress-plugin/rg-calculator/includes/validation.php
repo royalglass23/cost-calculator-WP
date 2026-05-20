@@ -58,14 +58,31 @@ function rg_sanitize_lead(array $lead): array {
  * Sanitize answers for storage.
  */
 function rg_sanitize_answers(array $answers): array {
+    $allowed_scenarios    = ['ground_level', 'balcony_balustrade', 'premium_pool_fence', 'stair_balustrade'];
+    $allowed_glass_types  = ['toughened_12mm', 'laminated'];
+    $allowed_glass_colours = ['clear', 'low_iron', 'tinted', 'frosted'];
+
+    $scenario     = sanitize_text_field($answers['scenario']    ?? '');
+    $glass_type   = sanitize_text_field($answers['glassType']   ?? 'toughened_12mm');
+    $glass_colour = sanitize_text_field($answers['glassColour'] ?? 'clear');
+
+    $raw_triggers  = $answers['callTriggers'] ?? [];
+    $call_triggers = is_array($raw_triggers)
+        ? array_map('sanitize_text_field', $raw_triggers)
+        : [];
+
     return [
-        'projectType'    => sanitize_text_field($answers['projectType']    ?? ''),
-        'length'         => (int)   ($answers['length']        ?? $answers['lengthMetres'] ?? 0),
-        'height'         => sanitize_text_field($answers['height']         ?? ''),
-        'corners'        => (int)   ($answers['corners']       ?? 0),
-        'gates'          => (int)   ($answers['gates']         ?? 0),
-        'fixingMethod'   => sanitize_text_field($answers['fixingMethod']   ?? ''),
-        'hardwareFinish' => sanitize_text_field($answers['hardwareFinish'] ?? ''),
+        'scenario'         => in_array($scenario,     $allowed_scenarios,     true) ? $scenario     : '',
+        'length'           => (int)   ($answers['length']          ?? 0),
+        'landingLength'    => (int)   ($answers['landingLength']   ?? 0),
+        'corners'          => (int)   ($answers['corners']         ?? 0),
+        'gates'            => (int)   ($answers['gates']           ?? 0),
+        'glassType'        => in_array($glass_type,   $allowed_glass_types,   true) ? $glass_type   : 'toughened_12mm',
+        'glassColour'      => in_array($glass_colour, $allowed_glass_colours, true) ? $glass_colour : 'clear',
+        'interlikingRails' => !empty($answers['interlikingRails']),
+        'fixingMethod'     => sanitize_text_field($answers['fixingMethod']    ?? ''),
+        'hardwareFinish'   => sanitize_text_field($answers['hardwareFinish']  ?? ''),
+        'callTriggers'     => $call_triggers,
     ];
 }
 
@@ -74,11 +91,10 @@ function rg_sanitize_answers(array $answers): array {
  */
 function rg_sanitize_estimate(array $est): array {
     return [
-        'low'                => (float) ($est['low']                ?? $est['estimate_low'] ?? 0),
-        'high'               => (float) ($est['high']               ?? $est['estimate_high'] ?? 0),
-        'subtotal'           => (float) ($est['subtotal']           ?? 0),
-        'needsConsultation'  => (bool)  ($est['needsConsultation']  ?? false),
-        'consultationReasons'=> array_map('sanitize_text_field', (array) ($est['consultationReasons'] ?? [])),
+        'low'        => (float) ($est['low']      ?? $est['estimate_low']  ?? 0),
+        'high'       => (float) ($est['high']     ?? $est['estimate_high'] ?? 0),
+        'subtotal'   => (float) ($est['subtotal'] ?? 0),
+        'needsCallUs'=> (bool)  ($est['needsCallUs'] ?? false),
     ];
 }
 
@@ -112,18 +128,32 @@ function rg_normalize_lead(array $lead): array {
  * Validate calculator answers shape and bounds.
  */
 function rg_validate_answers(array $answers) {
-    $project_type = sanitize_text_field($answers['projectType'] ?? '');
-    if ($project_type === '' || !in_array($project_type, ['balustrade', 'pool_fence'], true)) {
-        return new WP_Error('invalid_project_type', 'Invalid project type');
+    $allowed_scenarios    = ['ground_level', 'balcony_balustrade', 'premium_pool_fence', 'stair_balustrade'];
+    $allowed_glass_types  = ['toughened_12mm', 'laminated'];
+    $allowed_glass_colours = ['clear', 'low_iron', 'tinted', 'frosted'];
+
+    $scenario = sanitize_text_field($answers['scenario'] ?? '');
+    if ($scenario === '' || !in_array($scenario, $allowed_scenarios, true)) {
+        return new WP_Error('invalid_scenario', 'Invalid scenario');
     }
 
-    $length = (int) ($answers['length'] ?? $answers['lengthMetres'] ?? 0);
+    $glass_type = sanitize_text_field($answers['glassType'] ?? '');
+    if ($glass_type !== '' && !in_array($glass_type, $allowed_glass_types, true)) {
+        return new WP_Error('invalid_glass_type', 'Invalid glass type');
+    }
+
+    $glass_colour = sanitize_text_field($answers['glassColour'] ?? '');
+    if ($glass_colour !== '' && !in_array($glass_colour, $allowed_glass_colours, true)) {
+        return new WP_Error('invalid_glass_colour', 'Invalid glass colour');
+    }
+
+    $length = (int) ($answers['length'] ?? 0);
     if ($length < 1 || $length > 200) {
         return new WP_Error('invalid_length', 'Invalid project length');
     }
 
     $corners = (int) ($answers['corners'] ?? 0);
-    $gates = (int) ($answers['gates'] ?? 0);
+    $gates   = (int) ($answers['gates']   ?? 0);
     if ($corners < 0 || $corners > 50 || $gates < 0 || $gates > 20) {
         return new WP_Error('invalid_counts', 'Invalid corner or gate count');
     }

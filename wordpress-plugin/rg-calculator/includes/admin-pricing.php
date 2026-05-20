@@ -29,31 +29,81 @@ function rg_admin_pricing_page(): void {
     // Save
     if (isset($_POST['rg_pricing_nonce']) && wp_verify_nonce($_POST['rg_pricing_nonce'], 'rg_save_pricing')) {
         $saved = [
-            'ratePerMetre'               => (float) ($_POST['ratePerMetre']              ?? 500),
-            'minimumLength'              => (int)   ($_POST['minimumLength']             ?? 5),
-            'gatePrice'                  => (float) ($_POST['gatePrice']                ?? 1100),
-            'cornerSurcharge'            => (float) ($_POST['cornerSurcharge']           ?? 150),
-            'hardwareSurchargePerMetre'  => (float) ($_POST['hardwareSurchargePerMetre'] ?? 50),
-            'hardwareMinimumSurcharge'   => (float) ($_POST['hardwareMinimumSurcharge']  ?? 250),
-            'rangeLowPercent'            => (int)   ($_POST['rangeLowPercent']           ?? 90),
-            'rangeHighPercent'           => (int)   ($_POST['rangeHighPercent']          ?? 120),
+            'scenarios' => [
+                'ground_level'       => [
+                    'ratePerMetre' => (float) ($_POST['rate_ground_level']       ?? 280),
+                    'gatePrice'    => null,
+                ],
+                'balcony_balustrade' => [
+                    'ratePerMetre' => (float) ($_POST['rate_balcony_balustrade'] ?? 320),
+                    'gatePrice'    => null,
+                ],
+                'premium_pool_fence' => [
+                    'ratePerMetre' => (float) ($_POST['rate_premium_pool_fence'] ?? 380),
+                    'gatePrice'    => (float) ($_POST['gate_premium_pool_fence'] ?? 680),
+                ],
+                'stair_balustrade'   => [
+                    'ratePerMetre' => (float) ($_POST['rate_stair_balustrade']   ?? 330),
+                    'gatePrice'    => null,
+                ],
+            ],
+            'minimumLength'           => (int)   ($_POST['minimumLength']           ?? 5),
+            'cornerSurcharge'         => (float) ($_POST['cornerSurcharge']         ?? 85),
+            'hardwareFinishSurcharge' => [
+                'standard_chrome' => 0,
+                'matte_black'     => (float) ($_POST['finish_matte_black']      ?? 15),
+                'brushed_chrome'  => (float) ($_POST['finish_brushed_chrome']   ?? 12),
+                'powder_coated'   => (float) ($_POST['finish_powder_coated']    ?? 22),
+                'not_sure'        => 0,
+            ],
+            'glassTypeSurcharge' => [
+                'toughened_12mm' => 0,
+                'laminated'      => (float) ($_POST['glass_type_laminated'] ?? 0),
+            ],
+            'glassColourSurcharge' => [
+                'clear'    => 0,
+                'tinted'   => (float) ($_POST['glass_colour_tinted']   ?? 0),
+                'frosted'  => (float) ($_POST['glass_colour_frosted']  ?? 0),
+                'low_iron' => (float) ($_POST['glass_colour_low_iron'] ?? 0),
+            ],
+            'interlikingRailsSurcharge' => (float) ($_POST['interlinking_rails'] ?? 0),
+            'rangeLowPercent'  => (int) ($_POST['rangeLowPercent']  ?? 90),
+            'rangeHighPercent' => (int) ($_POST['rangeHighPercent'] ?? 120),
         ];
         update_option('rg_calculator_pricing', $saved);
         echo '<div class="notice notice-success is-dismissible"><p>Pricing saved.</p></div>';
     }
 
+    // Load current values
     $defaults = [
-        'ratePerMetre'               => 500,
-        'minimumLength'              => 5,
-        'gatePrice'                  => 1100,
-        'cornerSurcharge'            => 150,
-        'hardwareSurchargePerMetre'  => 50,
-        'hardwareMinimumSurcharge'   => 250,
-        'rangeLowPercent'            => 90,
-        'rangeHighPercent'           => 120,
+        'scenarios' => [
+            'ground_level'       => ['ratePerMetre' => 280, 'gatePrice' => null],
+            'balcony_balustrade' => ['ratePerMetre' => 320, 'gatePrice' => null],
+            'premium_pool_fence' => ['ratePerMetre' => 380, 'gatePrice' => 680],
+            'stair_balustrade'   => ['ratePerMetre' => 330, 'gatePrice' => null],
+        ],
+        'minimumLength'            => 5,
+        'cornerSurcharge'          => 85,
+        'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
+        'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
+        'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
+        'interlikingRailsSurcharge' => 0,
+        'rangeLowPercent'          => 90,
+        'rangeHighPercent'         => 120,
     ];
-    $p = array_merge($defaults, get_option('rg_calculator_pricing', []));
 
+    $saved_option = get_option('rg_calculator_pricing', []);
+    if (!empty($saved_option['scenarios']) && !empty($saved_option['hardwareFinishSurcharge'])) {
+        $p = array_replace_recursive($defaults, $saved_option);
+    } else {
+        $p = $defaults;
+    }
+
+    $sc  = $p['scenarios'];
+    $hw  = $p['hardwareFinishSurcharge'];
+    $gt  = $p['glassTypeSurcharge'];
+    $gc  = $p['glassColourSurcharge'];
+    $ir  = $p['interlikingRailsSurcharge'];
     ?>
     <div class="wrap">
         <h1>RG Calculator — Pricing Settings</h1>
@@ -62,55 +112,181 @@ function rg_admin_pricing_page(): void {
         <form method="post" action="">
             <?php wp_nonce_field('rg_save_pricing', 'rg_pricing_nonce'); ?>
 
-            <table class="form-table" style="max-width:640px">
+            <h2>Base Rates &amp; Gate Prices</h2>
+            <table class="form-table" style="max-width:700px">
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Base rate ($/m)</th>
+                        <th>Gate price ($)</th>
+                    </tr>
+                </thead>
                 <tbody>
                 <?php
-                $rows = [
-                    ['ratePerMetre',               'Base rate per linear metre ($)',       'The main rate charged per metre of glass run. Applied to both pool fence and balustrade.',        '$500'],
-                    ['minimumLength',              'Minimum chargeable metres',            'Jobs shorter than this are still charged as if they were this length.',                           '5'],
-                    ['gatePrice',                  'Gate price — per gate ($)',            'Full price per gate, including self-closing hinges and latch hardware.',                         '$1,100'],
-                    ['cornerSurcharge',            'Corner surcharge — per corner ($)',    'Added for each 90° corner in the glass run. Non-standard angles are quoted separately.',         '$150'],
-                    ['hardwareSurchargePerMetre',  'Non-standard hardware — per metre ($)','Charged when finish is matte black, brushed chrome, or brass. Not applied for standard chrome.', '$50'],
-                    ['hardwareMinimumSurcharge',   'Non-standard hardware — minimum ($)',  'Minimum hardware surcharge even for short runs.',                                               '$250'],
-                    ['rangeLowPercent',            'Estimate band — low end (%)',          'Estimate lower bound = subtotal × this ÷ 100. E.g. 90 = show –10% from subtotal.',              '90'],
-                    ['rangeHighPercent',           'Estimate band — high end (%)',         'Estimate upper bound = subtotal × this ÷ 100. E.g. 120 = show +20% above subtotal.',             '120'],
+                $scenario_rows = [
+                    ['ground_level',       'Ground Level Fence (≤1m)',         false],
+                    ['balcony_balustrade', 'Balcony / Patio Balustrade (>1m)', false],
+                    ['premium_pool_fence', 'Premium Pool Fence (1.2m)',         true],
+                    ['stair_balustrade',   'Stair Balustrade',                  false],
                 ];
-                foreach ($rows as [$name, $label, $desc, $placeholder]):
+                foreach ($scenario_rows as [$key, $label, $has_gate]):
+                    $rate = $sc[$key]['ratePerMetre'] ?? '';
+                    $gate = $sc[$key]['gatePrice'] ?? '';
                 ?>
                 <tr>
-                    <th scope="row"><label for="<?= esc_attr($name) ?>"><?= esc_html($label) ?></label></th>
+                    <td><strong><?= esc_html($label) ?></strong></td>
                     <td>
-                        <input
-                            type="number"
-                            id="<?= esc_attr($name) ?>"
-                            name="<?= esc_attr($name) ?>"
-                            value="<?= esc_attr($p[$name]) ?>"
-                            placeholder="<?= esc_attr($placeholder) ?>"
-                            step="any"
-                            style="width:120px"
-                            class="regular-text"
-                        >
-                        <p class="description"><?= esc_html($desc) ?></p>
+                        <input type="number" name="rate_<?= esc_attr($key) ?>" value="<?= esc_attr($rate) ?>"
+                               step="any" min="0" style="width:100px" class="regular-text">
+                    </td>
+                    <td>
+                        <?php if ($has_gate): ?>
+                            <input type="number" name="gate_<?= esc_attr($key) ?>" value="<?= esc_attr($gate) ?>"
+                                   step="any" min="0" style="width:100px" class="regular-text">
+                        <?php else: ?>
+                            <span style="color:#999">N/A</span>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>
 
-            <h2 style="margin-top:2rem">What each pricing item covers</h2>
-            <div style="background:#f9f9f9;border:1px solid #e0e0e0;padding:16px;border-radius:4px;max-width:640px;font-size:13px;line-height:1.7">
-                <p><strong>Formula:</strong></p>
-                <code style="display:block;background:#fff;padding:12px;border-radius:3px;white-space:pre-wrap">
-Estimate = max(length, minimumLength) × ratePerMetre
-         + gates × gatePrice
-         + corners × cornerSurcharge
-         + hardware surcharge (if matte black / brushed / brass)
+            <h2 style="margin-top:2rem">Glass Type Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when selected. 12mm Toughened is always the base — no surcharge. Shown only for Balcony/Patio and Stair scenarios.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <tr>
+                    <th scope="row"><label for="glass_type_laminated">Laminated Glass</label></th>
+                    <td>
+                        <input type="number" id="glass_type_laminated" name="glass_type_laminated"
+                               value="<?= esc_attr($gt['laminated'] ?? 0) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
 
-Range low  = estimate × rangeLowPercent  / 100
-Range high = estimate × rangeHighPercent / 100
+            <h2 style="margin-top:2rem">Glass Colour Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when selected. Clear glass is always free. Frosted glass diffuses light for privacy.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <?php
+                $colour_rows = [
+                    ['tinted',   'Tinted Glass',           $gc['tinted']   ?? 0],
+                    ['frosted',  'Frosted Glass',          $gc['frosted']  ?? 0],
+                    ['low_iron', 'Low Iron / Ultra-Clear', $gc['low_iron'] ?? 0],
+                ];
+                foreach ($colour_rows as [$key, $label, $val]):
+                ?>
+                <tr>
+                    <th scope="row"><label for="glass_colour_<?= esc_attr($key) ?>"><?= esc_html($label) ?></label></th>
+                    <td>
+                        <input type="number" id="glass_colour_<?= esc_attr($key) ?>" name="glass_colour_<?= esc_attr($key) ?>"
+                               value="<?= esc_attr($val) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Interlinking Rails Surcharge ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre when interlinking (top) rails are added. Only available with 12mm Toughened glass on Balcony/Patio and Stair scenarios.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <tr>
+                    <th scope="row"><label for="interlinking_rails">Interlinking Rails</label></th>
+                    <td>
+                        <input type="number" id="interlinking_rails" name="interlinking_rails"
+                               value="<?= esc_attr($ir) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Hardware Finish Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Added per linear metre when a premium finish is selected. Standard Chrome is always free.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <?php
+                $finish_rows = [
+                    ['matte_black',    'Matte Black',    $hw['matte_black']    ?? 15],
+                    ['brushed_chrome', 'Brushed Chrome', $hw['brushed_chrome'] ?? 12],
+                    ['powder_coated',  'Powder Coated',  $hw['powder_coated']  ?? 22],
+                ];
+                foreach ($finish_rows as [$key, $label, $val]):
+                ?>
+                <tr>
+                    <th scope="row"><label for="finish_<?= esc_attr($key) ?>"><?= esc_html($label) ?></label></th>
+                    <td>
+                        <input type="number" id="finish_<?= esc_attr($key) ?>" name="finish_<?= esc_attr($key) ?>"
+                               value="<?= esc_attr($val) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Other Settings</h2>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <tr>
+                    <th scope="row"><label for="cornerSurcharge">Corner surcharge ($)</label></th>
+                    <td>
+                        <input type="number" id="cornerSurcharge" name="cornerSurcharge"
+                               value="<?= esc_attr($p['cornerSurcharge']) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <p class="description">Per 90° corner in the glass run.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="minimumLength">Minimum chargeable length (m)</label></th>
+                    <td>
+                        <input type="number" id="minimumLength" name="minimumLength"
+                               value="<?= esc_attr($p['minimumLength']) ?>" step="1" min="1" style="width:100px" class="regular-text">
+                        <p class="description">Jobs shorter than this are charged as if they were this length.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="rangeLowPercent">Estimate low band (%)</label></th>
+                    <td>
+                        <input type="number" id="rangeLowPercent" name="rangeLowPercent"
+                               value="<?= esc_attr($p['rangeLowPercent']) ?>" step="1" min="50" max="100" style="width:100px" class="regular-text">
+                        <p class="description">Low estimate = subtotal × this ÷ 100. E.g. 90 = –10%.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="rangeHighPercent">Estimate high band (%)</label></th>
+                    <td>
+                        <input type="number" id="rangeHighPercent" name="rangeHighPercent"
+                               value="<?= esc_attr($p['rangeHighPercent']) ?>" step="1" min="100" max="200" style="width:100px" class="regular-text">
+                        <p class="description">High estimate = subtotal × this ÷ 100. E.g. 120 = +20%.</p>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2 style="margin-top:2rem">Formula Reference</h2>
+            <div style="background:#f9f9f9;border:1px solid #e0e0e0;padding:16px;border-radius:4px;max-width:640px;font-size:13px;line-height:1.7">
+                <code style="display:block;background:#fff;padding:12px;border-radius:3px;white-space:pre-wrap">
+Billable length      = max(entered length, minimumLength)
+
+Base cost            = billable length × scenario base rate
+Corner cost          = number of corners × corner surcharge
+Gate cost            = number of gates × gate price  (Pool Fence only)
+Glass type surcharge = billable length × glass type surcharge/m
+Glass colour surcharge = billable length × colour surcharge/m
+Interlinking rails   = billable length × interlinking rails surcharge/m  (if ticked)
+Finish surcharge     = billable length × finish surcharge/m
+
+Subtotal             = base + corners + gates + glass type + glass colour + interlinking + finish
+Low estimate         = subtotal × rangeLowPercent  / 100
+High estimate        = subtotal × rangeHighPercent / 100
                 </code>
-                <p style="margin-top:12px"><strong>Assumptions baked in (not separately priced):</strong><br>
-                12mm toughened clear glass · standard shape · ground floor · good substrate condition · timber deck</p>
+                <p style="margin-top:12px;color:#666"><strong>Standard heights assumed:</strong><br>
+                Ground Level ≤1m · Balcony/Patio 1m (NZBC) · Pool Fence 1.2m (NZ Pool Safety Act) · Stair 1m (NZBC)</p>
             </div>
 
             <?php submit_button('Save pricing', 'primary', 'submit', true, ['style' => 'margin-top:1.5rem']); ?>

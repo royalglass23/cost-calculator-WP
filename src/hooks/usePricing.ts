@@ -22,9 +22,13 @@ export function usePricing(): { pricing: PricingConfig; loading: boolean } {
 
     fetch(`${restUrl}/pricing`)
       .then((r) => r.json())
-      .then((data: Partial<PricingConfig>) => {
-        // Merge with defaults so any missing keys still have values
-        setPricing({ ...DEFAULT_PRICING, ...data });
+      .then((data: unknown) => {
+        // Validate that the response has the expected nested structure before using it.
+        // If the WordPress option still holds the old flat V1 shape, fall through to defaults.
+        const d = data as Partial<PricingConfig>;
+        if (d && typeof d === 'object' && d.scenarios && d.hardwareFinishSurcharge) {
+          setPricing({ ...DEFAULT_PRICING, ...d });
+        }
       })
       .catch(() => {
         // Silently fall back to compiled defaults
