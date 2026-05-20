@@ -7,18 +7,17 @@ function rg_send_lead_email(int $lead_id, array $lead, array $answers, array $es
     $a       = rg_sanitize_answers($answers);
     $e       = rg_sanitize_estimate($est);
 
-    $project_labels = ['balustrade' => 'Glass Balustrade', 'pool_fence' => 'Glass Pool Fence'];
-    $project        = $project_labels[$a['projectType']] ?? $a['projectType'];
-    $name           = "{$l['firstName']} {$l['lastName']}";
+    $project_labels = [
+        'ground_level'       => 'Ground Level Fence',
+        'balcony_balustrade' => 'Balcony / Patio Balustrade',
+        'premium_pool_fence' => 'Premium Pool Fence',
+        'stair_balustrade'   => 'Stair Balustrade',
+    ];
+    $project   = $project_labels[$a['scenario']] ?? $a['scenario'];
+    $name      = "{$l['firstName']} {$l['lastName']}";
     $est_range = '$' . number_format($e['low'], 0) . ' – $' . number_format($e['high'], 0) . ' excl. GST';
 
     $subject = "New RG Lead #{$lead_id} — {$project} — {$name}";
-
-    $consult_block = '';
-    if (!empty($e['consultationReasons'])) {
-        $reasons = array_map(fn($r) => "  · {$r}", $e['consultationReasons']);
-        $consult_block = "\nTo confirm at site visit:\n" . implode("\n", $reasons) . "\n";
-    }
 
     $notes_block = $l['notes'] ? "\nNotes from customer:\n{$l['notes']}\n" : '';
 
@@ -34,32 +33,27 @@ Address:    {$l['address']}
 ─── Project ──────────────────────────────────────
 Type:       {$project}
 Length:     {$a['length']}m
-Height:     {$a['height']}
 Corners:    {$a['corners']}
 Gates:      {$a['gates']}
+Glass type: {$a['glassType']}
+Colour:     {$a['glassColour']}
 Fixing:     {$a['fixingMethod']}
 Finish:     {$a['hardwareFinish']}
 
 ─── Estimate ─────────────────────────────────────
 Range:      {$est_range}
-{$consult_block}{$notes_block}
-─── Action ──────────────────────────────────────
+{$notes_block}
+─── Action ───────────────────────────────────────
 View lead in WordPress admin:
-{admin_url("admin.php?page=rg-leads&lead={$lead_id}")}
 
 TEXT;
 
-    // Replace admin_url placeholder (can't call admin_url() inside heredoc directly in older PHP)
-    $body = str_replace('{admin_url("admin.php?page=rg-leads&lead=' . $lead_id . '")}', admin_url("admin.php?page=rg-leads&lead={$lead_id}"), $body);
+    $body .= admin_url("admin.php?page=rg-leads&lead={$lead_id}");
 
     $headers = ['Content-Type: text/plain; charset=UTF-8'];
     wp_mail($to, $subject, $body, $headers);
 }
 
-/**
- * Send a rich HTML estimate email to a customer email address.
- * Used both for the automatic confirmation and the on-demand "send to inbox" button.
- */
 function rg_send_estimate_email_to_customer(
     string $to_email,
     string $first_name,
@@ -69,65 +63,84 @@ function rg_send_estimate_email_to_customer(
     $a = rg_sanitize_answers($answers);
     $e = rg_sanitize_estimate($estimate);
 
-    $project_map = ['balustrade' => 'Glass Balustrade', 'pool_fence' => 'Glass Pool Fence'];
-    $project     = $project_map[$a['projectType']] ?? 'Glass Project';
-    $length      = (int) $a['length'];
+    $project_labels = [
+        'ground_level'       => 'Ground Level Fence',
+        'balcony_balustrade' => 'Balcony / Patio Balustrade',
+        'premium_pool_fence' => 'Premium Pool Fence',
+        'stair_balustrade'   => 'Stair Balustrade',
+    ];
+    $project = $project_labels[$a['scenario']] ?? 'Glass Project';
+    $length  = (int) $a['length'];
 
-    // ── Estimate band — always show the price ──
     $low      = '$' . number_format($e['low'],  0);
     $high     = '$' . number_format($e['high'], 0);
     $est_html = "<p style=\"color:#ffffff;font-size:38px;font-weight:700;margin:0 0 4px 0;letter-spacing:-0.02em;\">{$low} &ndash; {$high}</p>";
     $est_sub  = "Excluding GST &middot; based on {$length}m effective length";
 
-    // ── Amber bar — mirrors the on-screen concerns panel ──
-    $amber_block      = '';
-    $band_bottom_style = 'border-radius:14px;margin:0 0 30px 0;'; // no concerns — fully rounded + gap
-    if (!empty($e['consultationReasons'])) {
-        $band_bottom_style = 'border-radius:14px 14px 0 0;margin:0;'; // flat bottom, merges with amber bar
-        $reason_rows = '';
-        foreach ($e['consultationReasons'] as $reason) {
-            $r = esc_html($reason);
-            $reason_rows .= "<p style=\"font-size:13px;color:#b45309;margin:0 0 3px 0;\">&middot; {$r}</p>";
-        }
-        $amber_block = <<<AMBER
-  <!-- Amber concerns bar -->
-  <div style="background:#fffbeb;border:1px solid #fde68a;border-top:none;border-radius:0 0 14px 14px;padding:14px 20px;margin:0 0 30px 0;">
-    <p style="font-size:12px;font-weight:600;color:#92400e;margin:0 0 6px 0;">A few things we'll confirm at the site visit:</p>
-    {$reason_rows}
-  </div>
-AMBER;
-    }
-
-    // ── Project summary table ──
-    $height_map  = ['standard_1m'=>'1m above floor','less_than_1m'=>'Less than 1m','standard_1_2m'=>'1.2m (NZ pool standard)','not_sure'=>'To be confirmed','custom'=>'Custom'];
-    $fixing_map  = ['spigots'=>'Spigots','standoff_posts'=>'Stand-off posts','hidden_channel'=>'Hidden channel','not_sure'=>'To be confirmed'];
-    $finish_map  = ['standard_chrome'=>'Standard chrome','matte_black'=>'Matte black','brushed_chrome'=>'Brushed chrome','brass'=>'Brass','custom'=>'Custom','not_sure'=>'To be confirmed'];
+    $glass_type_labels = [
+        'toughened_12mm' => '12mm Toughened + Capping',
+        'laminated'      => 'Laminated Glass',
+    ];
+    $glass_colour_labels = [
+        'clear'    => 'Clear',
+        'low_iron' => 'Low Iron / Ultra-Clear',
+        'tinted'   => 'Tinted',
+        'frosted'  => 'Frosted',
+    ];
+    $fixing_map = [
+        'spigots'        => 'Spigots',
+        'standoff_posts' => 'Stand-off posts',
+        'hidden_channel' => 'Hidden channel',
+        'not_sure'       => 'To be confirmed',
+    ];
+    $finish_map = [
+        'standard_chrome' => 'Standard chrome',
+        'matte_black'     => 'Matte black',
+        'brushed_chrome'  => 'Brushed chrome',
+        'powder_coated'   => 'Powder coated',
+        'not_sure'        => 'To be confirmed',
+    ];
 
     $rows = [];
-    if ($a['projectType']) $rows[] = ['Project type', $project];
-    if ($length > 0)       $rows[] = ['Length', "{$length}m"];
-    if ($a['height'])      $rows[] = ['Height', $height_map[$a['height']] ?? $a['height']];
-    $rows[]                         = ['Corners', (string) $a['corners']];
-    $rows[]                         = ['Gates',   (string) $a['gates']];
-    if ($a['fixingMethod'])  $rows[] = ['Fixing method',   $fixing_map[$a['fixingMethod']]   ?? $a['fixingMethod']];
-    if ($a['hardwareFinish'])$rows[] = ['Hardware finish',  $finish_map[$a['hardwareFinish']] ?? $a['hardwareFinish']];
+    $rows[] = ['Project type',    $project];
+    $rows[] = ['Length',          "{$length}m"];
+    if ($a['scenario'] !== 'stair_balustrade') {
+        $rows[] = ['Corners', (string) $a['corners']];
+    }
+    if ($a['scenario'] === 'premium_pool_fence') {
+        $rows[] = ['Gates', (string) $a['gates']];
+    } else {
+        $rows[] = ['Gates', 'N/A'];
+    }
+    if (!empty($a['glassType'])) {
+        $rows[] = ['Glass type',   $glass_type_labels[$a['glassType']]     ?? $a['glassType']];
+    }
+    $rows[] = ['Glass colour',     $glass_colour_labels[$a['glassColour']] ?? $a['glassColour']];
+    if (!empty($a['fixingMethod'])) {
+        $rows[] = ['Fixing method',  $fixing_map[$a['fixingMethod']]  ?? $a['fixingMethod']];
+    }
+    if (!empty($a['hardwareFinish'])) {
+        $rows[] = ['Hardware finish', $finish_map[$a['hardwareFinish']] ?? $a['hardwareFinish']];
+    }
 
     $rows_html = '';
     $last = count($rows) - 1;
     foreach ($rows as $i => [$label, $value]) {
-        $border = ($i < $last) ? '1px solid #f3f4f6' : 'none';
+        $border     = ($i < $last) ? '1px solid #f3f4f6' : 'none';
+        $label_safe = esc_html($label);
+        $value_safe = esc_html($value);
         $rows_html .= <<<ROW
 <tr>
-  <td style="padding:9px 0;color:#6b7280;font-size:13px;border-bottom:{$border};">{$label}</td>
-  <td style="padding:9px 0;color:#111827;font-size:13px;font-weight:500;text-align:right;border-bottom:{$border};">{$value}</td>
+  <td style="padding:9px 0;color:#6b7280;font-size:13px;border-bottom:{$border};">{$label_safe}</td>
+  <td style="padding:9px 0;color:#111827;font-size:13px;font-weight:500;text-align:right;border-bottom:{$border};">{$value_safe}</td>
 </tr>
 ROW;
     }
 
-    $name        = sanitize_text_field($first_name ?: 'there');
-    $name_html   = esc_html($name);
-    $from_email  = sanitize_email(defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email'));
-    $subject     = "{$name}, your Royal Glass estimate is here";
+    $name       = sanitize_text_field($first_name ?: 'there');
+    $name_html  = esc_html($name);
+    $from_email = sanitize_email(defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email'));
+    $subject    = "{$name}, your Royal Glass estimate is here";
 
     $html = <<<HTML
 <!DOCTYPE html>
@@ -141,13 +154,13 @@ ROW;
 <div style="max-width:600px;margin:32px auto;padding:0 12px 40px;">
 <div style="border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.10);">
 
-<!-- ── Header ─────────────────────────────────────────── -->
+<!-- Header -->
 <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 55%,#20496f 100%);padding:40px 36px 36px;">
   <p style="color:#7cb9f5;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 10px 0;">Royal Glass Limited</p>
   <h1 style="color:#ffffff;font-size:27px;font-weight:700;margin:0;line-height:1.3;">Your {$project} estimate<br>is ready, {$name_html}.</h1>
 </div>
 
-<!-- ── Body ──────────────────────────────────────────── -->
+<!-- Body -->
 <div style="background:#ffffff;padding:36px;">
 
   <p style="font-size:15px;color:#374151;line-height:1.75;margin:0 0 26px 0;">
@@ -156,17 +169,15 @@ ROW;
   </p>
 
   <!-- Estimate band -->
-  <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 100%);{$band_bottom_style}padding:30px 28px;text-align:center;">
+  <div style="background:linear-gradient(135deg,#152f4a 0%,#1a3c5e 100%);border-radius:14px;margin:0 0 30px 0;padding:30px 28px;text-align:center;">
     <p style="color:#7cb9f5;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;margin:0 0 12px 0;">Your indicative estimate</p>
     {$est_html}
     <p style="color:#7cb9f5;font-size:13px;margin:6px 0 0 0;">{$est_sub}</p>
   </div>
-  {$amber_block}
 
   <p style="font-size:15px;color:#374151;line-height:1.75;margin:0 0 16px 0;">
     <strong style="color:#1a3c5e;">You don't need to worry about a thing from here.</strong>
     NZ Building Code compliance, producer statements, council paperwork &mdash; we handle all of it, end to end.
-    Our customers consistently tell us this was the easiest part of their build. That's by design.
   </p>
 
   <p style="font-size:15px;color:#374151;line-height:1.75;margin:0 0 28px 0;">
@@ -224,7 +235,7 @@ ROW;
 
 </div>
 
-<!-- ── Footer ─────────────────────────────────────────── -->
+<!-- Footer -->
 <div style="background:#f8fafc;border-top:1px solid #e5eaf0;padding:22px 36px;text-align:center;">
   <p style="font-size:13px;color:#374151;font-weight:600;margin:0 0 5px 0;">Royal Glass Limited</p>
   <p style="font-size:12px;color:#9ca3af;margin:0 0 5px 0;">13E Paul Matthews Road, Rosedale, Auckland 0632</p>
@@ -242,8 +253,6 @@ ROW;
 </html>
 HTML;
 
-    // No custom From — let WordPress use its default (authorized by Bluehost's SPF).
-    // Reply-To directs any replies to the notify address without triggering SPF issues.
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
         "Reply-To: {$from_email}",
