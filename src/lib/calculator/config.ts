@@ -100,4 +100,10 @@ export const IMAGES = {
   powderCoated:  img('finish-brass.jpg'),
   finishCustom:  img('finish-custom.jpg'),
   notSure:       img('not-sure.jpg'),
+
+  // Substrate
+  substrateTimber:   img('substrate-timber.jpg'),
+  substrateConcrete: img('substrate-concrete.jpg'),
+  substrateTile:     img('substrate-tile.jpg'),
+  substrateSteel:    img('substrate-steel.jpg'),
 };

@@ -81,6 +81,7 @@ function rg_sanitize_answers(array $answers): array {
         'glassColour'      => in_array($glass_colour, $allowed_glass_colours, true) ? $glass_colour : 'clear',
         'interlikingRails' => !empty($answers['interlikingRails']),
         'fixingMethod'     => sanitize_text_field($answers['fixingMethod']    ?? ''),
+        'substrate'        => sanitize_text_field($answers['substrate']       ?? ''),
         'hardwareFinish'   => sanitize_text_field($answers['hardwareFinish']  ?? ''),
         'callTriggers'     => $call_triggers,
     ];
