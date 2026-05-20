@@ -330,6 +330,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       canContinue: true,
       content: (
         <>
+          <StepHero src={IMAGES.gates} alt="Frameless glass pool gate with self-closing latch" />
           <SliderInput
             label="Gates"
             value={answers.gates}
@@ -340,10 +341,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
             onChange={(value) => onChange({ gates: value })}
           />
           <StepNote>
-            NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool fences.
-          </StepNote>
-          <StepNote>
-            We use high-quality stainless steel gate hardware on all pool fence installations.
+            NZ Pool Safety Act requires at least 1 self-closing, lockable gate on all pool fences. We use high-quality stainless steel gate hardware on all pool fence installations.
           </StepNote>
           {answers.gates === 0 && (
             <ComplianceWarning>
