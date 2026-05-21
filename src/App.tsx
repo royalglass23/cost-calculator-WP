@@ -16,6 +16,7 @@ const INITIAL_ANSWERS: WizardAnswers = {
   glassColour: 'clear',
   interlikingRails: false,
   fixingMethod: null,
+  substrate: null,
   hardwareFinish: null,
   callTriggers: [],
 };
