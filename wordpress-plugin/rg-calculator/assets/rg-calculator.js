@@ -11583,7 +11583,7 @@ const v0 = y0(),
     colourClear: Ml("clarity-standard.jpg"),
     colourLowIron: Ml("clarity-lowiron.jpg"),
     colourTinted: Ml("clarity-tinted.jpg"),
-    colourFrosted: Ml("finish-custom.jpg"),
+    colourFrosted: Ml("clarity-frosted.jpg"),
     spigots: Ml("fix-spigots.jpg"),
     standoff: Ml("fix-standoff.jpg"),
     hiddenChannel: Ml("fix-channel.jpg"),
@@ -11739,7 +11739,7 @@ function Ma({
           })
         : m
           ? s.jsx("div", {
-              style: { width: "100%", height: K ? "112px" : "176px", overflow: "hidden" },
+              style: { width: "100%", height: K ? "132px" : "196px", overflow: "hidden" },
               children: s.jsx("img", {
                 src: m,
                 alt: M ?? B,
@@ -11975,7 +11975,7 @@ function pf({ src: m, alt: M }) {
   return s.jsx("div", {
     style: {
       width: "100%",
-      height: "180px",
+      height: "260px",
       overflow: "hidden",
       borderRadius: "12px",
       marginBottom: "24px",

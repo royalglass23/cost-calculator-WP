@@ -70,7 +70,7 @@ export function SelectionCard({
           aria-hidden="true"
         />
       ) : image ? (
-        <div style={{ width: '100%', height: compact ? '112px' : '176px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: compact ? '132px' : '196px', overflow: 'hidden' }}>
           <img
             src={image}
             alt={imageAlt ?? title}
@@ -237,7 +237,7 @@ export function ComplianceWarning({ children }: { children: React.ReactNode }) {
 
 export function StepHero({ src, alt }: { src: string; alt: string }) {
   return (
-    <div style={{ width: '100%', height: '180px', overflow: 'hidden', borderRadius: '12px', marginBottom: '24px' }}>
+    <div style={{ width: '100%', height: '260px', overflow: 'hidden', borderRadius: '12px', marginBottom: '24px' }}>
       <img
         src={src}
         alt={alt}
