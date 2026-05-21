@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-define('RG_DB_VERSION', '2.2.0');
+define('RG_DB_VERSION', '2.3.0');
 
 function rg_create_leads_table(): void {
     global $wpdb;
@@ -32,10 +32,13 @@ function rg_create_leads_table(): void {
         consult_notes TEXT            NOT NULL DEFAULT '',
         consent_given TINYINT(1)      NOT NULL DEFAULT 0,
         consented_at  DATETIME        NULL,
+        servicem8_status  VARCHAR(20)     NOT NULL DEFAULT '',
+        servicem8_sent_at DATETIME        NULL,
         created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         KEY status (status),
+        KEY servicem8_status (servicem8_status),
         KEY created_at (created_at)
     ) {$charset};";
 
@@ -53,6 +56,12 @@ function rg_create_leads_table(): void {
     }
     if (!in_array('substrate', $existing, true)) {
         $wpdb->query("ALTER TABLE {$table} ADD COLUMN substrate VARCHAR(50) NOT NULL DEFAULT '' AFTER fixing_method");
+    }
+    if (!in_array('servicem8_status', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN servicem8_status VARCHAR(20) NOT NULL DEFAULT '' AFTER consented_at");
+    }
+    if (!in_array('servicem8_sent_at', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN servicem8_sent_at DATETIME NULL AFTER servicem8_status");
     }
 }
 
