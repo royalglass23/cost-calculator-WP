@@ -34,6 +34,7 @@ const FIXING_LABELS: Record<string, string> = {
   spigots:        'Spigots',
   standoff_posts: 'Stand-off posts',
   hidden_channel: 'Hidden channel',
+  viking:         'Viking System',
   not_sure:       'To be confirmed',
 };
 
