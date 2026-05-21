@@ -92,6 +92,7 @@ function rg_send_estimate_email_to_customer(
         'spigots'        => 'Spigots',
         'standoff_posts' => 'Stand-off posts',
         'hidden_channel' => 'Hidden channel',
+        'viking'         => 'Viking System',
         'not_sure'       => 'To be confirmed',
     ];
     $finish_map = [

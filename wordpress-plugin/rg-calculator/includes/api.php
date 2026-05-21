@@ -120,7 +120,9 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         return rg_error('Unable to save lead. Please call us on 0800 769 254.', 500);
     }
 
-    // ── 7. Send email notification (after response is flushed) ────────────
+    // ── 7. Queue for ServiceM8 inbox (quality-gated, cron-dispatched) ─────
+    rg_sm8_maybe_queue($lead_id, $lead, $est, $loaded_at);
+    // ── 8. Send email notification (after response is flushed) ────────────
     // Capture in local vars for the closure — avoids reference issues.
     $email_lead_id = $lead_id;
     $email_lead    = $lead;

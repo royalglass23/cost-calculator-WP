@@ -14,6 +14,7 @@
  *   define('RG_TURNSTILE_SITE_KEY','0x...');         // Cloudflare Turnstile site key
  *   define('RG_TURNSTILE_SECRET',  '0x...');         // Cloudflare Turnstile secret key
  *   define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz'); // who gets the email
+ * *   define('RG_SM8_INBOX_EMAIL',   'de9f86@inbox.servicem8.com'); // ServiceM8 inbox
  */
 
 if (!defined('ABSPATH')) exit;
@@ -27,6 +28,7 @@ require_once RG_CALC_DIR . 'includes/database.php';
 require_once RG_CALC_DIR . 'includes/validation.php';
 require_once RG_CALC_DIR . 'includes/email.php';
 require_once RG_CALC_DIR . 'includes/api.php';
+require_once RG_CALC_DIR . 'includes/servicem8.php';
 require_once RG_CALC_DIR . 'includes/admin-pricing.php';
 require_once RG_CALC_DIR . 'includes/admin-leads.php';
 
@@ -34,6 +36,12 @@ require_once RG_CALC_DIR . 'includes/admin-leads.php';
 register_activation_hook(__FILE__, 'rg_calc_activate');
 function rg_calc_activate() {
     rg_create_leads_table();
+    rg_sm8_schedule_cron();
+}
+// ── Deactivation: clear cron ──────────────────────────────────────────────────
+register_deactivation_hook(__FILE__, 'rg_calc_deactivate');
+function rg_calc_deactivate() {
+    rg_sm8_unschedule_cron();
 }
 
 // ── Shortcode ─────────────────────────────────────────────────────────────────
