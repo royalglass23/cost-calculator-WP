@@ -147,6 +147,12 @@ const FIXING_OPTIONS: Array<{ value: FixingMethod; title: string; description: s
     image: IMAGES.hiddenChannel,
   },
   {
+    value: "viking",
+    title: "Viking System",
+    description: "Top-clamping posts — no floor drilling required",
+    image: IMAGES.viking,
+  },
+  {
     value: "not_sure",
     title: "Not Sure",
     description: "Our team will recommend the best option on site",
