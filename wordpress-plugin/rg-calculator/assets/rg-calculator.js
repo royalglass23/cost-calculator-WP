@@ -12111,11 +12111,11 @@ const T0 = [
       image: zl.hiddenChannel,
     },
     {
-        value: "viking",
-        title: "Viking",
-        description: "Great for tiled or concrete surfaces where core drilling is not an option",
-        image: zl.viking,
-      },
+      value: "viking",
+      title: "Viking",
+      description: "Great for tiled or concrete surfaces where core drilling is not an option",
+      image: zl.viking,
+    },
     {
       value: "not_sure",
       title: "Not Sure",
