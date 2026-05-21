@@ -52,25 +52,25 @@ The `@` path alias resolves to `src/` (configured in `vite.config.ts`).
 **Wizard flow (App.tsx):**
 
 ```
-steps 1-7 (wizard questions)
-  -> step 9 (LeadCapture form — contact details, address, notes, consent)
-    -> step 8 (ResultScreen — estimate + send-to-email)
+CalculatorForm (up to 9 steps depending on project type)
+  -> LeadCapture (contact details, address, notes, consent)
+    -> ResultScreen (estimate + send-to-email)
 ```
 
 State lives entirely in `App.tsx` local React state. No global state library is used.
 
-**Step numbering:**
-| Step | Content |
-|---|---|
-| 1 | Project type (balustrade / pool fence) |
-| 2 | Length (slider) |
-| 3 | Height |
-| 4 | Corners |
-| 5 | Gates |
-| 6 | Fixing method |
-| 7 | Hardware finish |
-| 9 | Lead capture (contact form) |
-| 8 | Result screen |
+**Steps (all in `CalculatorForm.tsx`):**
+| # | Title | Conditional? |
+|---|---|---|
+| 1 | What's your project? (scenario) | Always |
+| 2 | Total length of glass run | Always |
+| 3 | How many corners? | Hidden for `stair_balustrade` |
+| 4 | How many gates? | Only for `premium_pool_fence` |
+| 5 | Glass type | Hidden for `ground_level` and `premium_pool_fence` |
+| 6 | Glass colour | Always |
+| 7 | How will the glass be fixed? (fixing method) | Always |
+| 8 | What is the substrate? | Always — **mandatory before Continue** |
+| 9 | Hardware finish | Always |
 
 ### Pricing engine (`src/lib/calculator/`)
 
@@ -90,7 +90,7 @@ State lives entirely in `App.tsx` local React state. No global state library is 
 - Hardware finish `not_sure` — estimated at standard chrome
 - Hardware finish `custom` — pricing may vary
 
-**Hardware surcharge** applies only to `matte_black`, `brushed_chrome`, `brass` finishes.
+**Hardware surcharge** applies only to `matte_black`, `brushed_chrome`, `powder_coated` finishes.
 
 **To change prices:** Edit only `config.ts`. Run `npm run build` and redeploy.
 
@@ -106,12 +106,12 @@ All components use **inline `style` props only** — no Tailwind classNames, no 
 
 | File | Role |
 |---|---|
-| `WizardShell.tsx` | Outer chrome: progress bar, back/continue nav, step counter |
-| `steps/Steps.tsx` | All 7 wizard step components |
-| `steps/shared.tsx` | `SelectionCard`, `SliderInput`, `StepNote`, `ComplianceWarning`, `StepHero` |
+| `steps/shared.tsx` | `SelectionCard`, `SliderInput`, `StepNote`, `ComplianceWarning`, `StepHero` — shared primitives used by `CalculatorForm` |
 | `LeadCapture.tsx` | Contact form (name, email, phone, customer type, timeframe, address, notes, consent). Cloudflare Turnstile invisible CAPTCHA. |
-| `NZAddressAutocomplete.tsx` | Address autocomplete using Nominatim (OpenStreetMap). No API key required. Currently uses Tailwind `className` props — needs converting to inline `style` (see constraints). |
+| `NZAddressAutocomplete.tsx` | Address autocomplete using Nominatim (OpenStreetMap). No API key required. Uses inline styles. |
 | `ResultScreen.tsx` | Estimate display, breakdown, project summary, assumptions, next steps, send-to-email card |
+
+`CalculatorForm.tsx` (in `src/components/`) owns the full step flow — all step content, canContinue logic, and navigation. It is not inside `wizard/`.
 
 ### Styles (`src/index.css`)
 

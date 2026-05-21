@@ -4,7 +4,26 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.1.1 — 2026-05-11 (current)
+## v2.1.2 — 2026-05-22 (current)
+
+### Bug fixes
+- **Viking system missing from fixing method step** — `CalculatorForm.tsx` had only 4 fixing options (spigots, standoff, hidden channel, not sure). Viking was defined in types, had an image in the WP plugin assets, and existed in the old `Steps.tsx`, but was never added to `CalculatorForm.tsx` when that file was written. Added.
+- **Viking label blank on result screen** — `FIXING_LABELS` in `ResultScreen.tsx` was missing the `viking` key, causing it to fall back to an empty string via `?? ''`. Added `viking: 'Viking System'`.
+- **Substrate step not blocking Continue** — `INITIAL_ANSWERS` in `App.tsx` omitted `substrate`, so `answers.substrate` was `undefined`. `undefined !== null` evaluates to `true` in JavaScript, making `canContinue` always true on the substrate step. Added `substrate: null` to `INITIAL_ANSWERS` so the Continue button is disabled until a selection is made.
+- **Plugin version out of sync** — `rg-calculator.php` header and `RG_CALC_VERSION` constant were never updated past `2.0.1` despite changelog reaching `v2.1.1`. Both updated to `2.1.2`.
+
+### Dead code removed
+- `src/components/wizard/steps/Steps.tsx` — old 7-step wizard component file, not imported anywhere. `CalculatorForm.tsx` replaced it entirely and contains all step definitions inline.
+- `src/components/wizard/WizardShell.tsx` — old progress-bar shell that went with `Steps.tsx`, not imported anywhere.
+- `src/assets/` — entire directory of ~40 images from the v1.x wizard (access types, glass conditions, working heights, handrail options, shapes). All images actually used by the `IMAGES` map in `config.ts` live in `wordpress-plugin/rg-calculator/assets/` and are served from the WordPress plugin URL. `src/assets/` was never imported.
+- `rgv2changes.patch` — stale scratch patch file.
+
+### Next planned: ServiceM8 integration
+Leads submitted via the calculator will be pushed to ServiceM8 as new jobs. Implementation TBD.
+
+---
+
+## v2.1.1 — 2026-05-11
 
 ### Codebase cleanup
 
