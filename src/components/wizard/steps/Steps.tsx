@@ -313,6 +313,16 @@ const FIXING_OPTIONS: FixingOption[] = [
     image: IMAGES.hiddenChannel,
     imageAlt: 'Hidden channel base glass balustrade with no visible posts — Royal Glass Auckland',
   },
+
+  {
+    value: 'viking',
+    label: 'Viking System',
+    description: 'Top-clamping post system — no floor drilling required',
+    detail: 'The Viking system uses top-mounted clamps so glass is secured without drilling into the floor. Great for tiled or concrete surfaces where core drilling is not an option.',
+    image: IMAGES.viking,
+    imageAlt: 'Viking top-clamp glass balustrade system — Royal Glass Auckland',
+  },
+
   {
     value: 'not_sure',
     label: 'Not Sure',
