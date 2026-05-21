@@ -85,18 +85,18 @@ export const IMAGES = {
   colourLowIron: img('clarity-lowiron.jpg'),
   colourTinted:  img('clarity-tinted.jpg'),
   colourCustom:  img('finish-custom.jpg'),
-  colourFrosted: img('finish-custom.jpg'),
+  colourFrosted: img('clarity-frosted.jpg'),
 
   // Fixing method
   spigots:       img('fix-spigots.jpg'),
   standoff:      img('fix-standoff.jpg'),
   hiddenChannel: img('fix-channel.jpg'),
+  viking:        img('fix-viking.jpg'), 
 
   // Hardware finish
   chrome:        img('finish-chrome.jpg'),
   matteBlack:    img('finish-black.jpg'),
   brushedChrome: img('finish-brushed.jpg'),
-  brass:         img('finish-brass.jpg'),
   powderCoated:  img('finish-brass.jpg'),
   finishCustom:  img('finish-custom.jpg'),
   notSure:       img('not-sure.jpg'),

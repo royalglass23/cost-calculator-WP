@@ -6,7 +6,7 @@ export type Scenario =
 
 export type GlassType = 'toughened_12mm' | 'laminated';
 export type GlassColour = 'clear' | 'low_iron' | 'tinted' | 'frosted';
-export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'not_sure';
+export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'viking' | 'not_sure';
 export type SubstrateType = 'timber' | 'concrete' | 'tile' | 'steel' | 'not_sure';
 
 export type HardwareFinish =
