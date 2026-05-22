@@ -20,11 +20,12 @@ declare global {
 }
 
 const CUSTOMER_TYPES: { value: CustomerType; label: string }[] = [
-  { value: 'homeowner',  label: 'Homeowner' },
-  { value: 'builder',    label: 'Builder' },
-  { value: 'architect',  label: 'Architect / designer' },
-  { value: 'developer',  label: 'Developer' },
-  { value: 'other',      label: 'Other' },
+  { value: 'homeowner',    label: 'Homeowner' },
+  { value: 'builder',      label: 'Builder' },
+  { value: 'developer',    label: 'Developer' },
+  { value: 'architect',    label: 'Architect' },
+  { value: 'pool_builder', label: 'Pool Builder' },
+  { value: 'other',        label: 'Other' },
 ];
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
@@ -111,7 +112,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!lead.fullName.trim()) e.fullName = 'Full name is required';
+    if (!lead.fullName.trim()) e.fullName = 'Name is required';
     if (!lead.phone.trim()) e.phone = 'Phone number is required';
     else if (!NZ_PHONE.test(lead.phone.replace(/\s/g, ''))) e.phone = 'Enter a valid NZ phone number';
     if (!lead.email.trim()) e.email = 'Email is required';
@@ -168,6 +169,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         lastName: restNames.join(' ').trim(),
         phone: lead.phone,
         email: lead.email,
+        customerType: lead.customerType ?? '',
         address: lead.address,
         callPreference: 'anytime',
         notes: lead.notes.trim(),
@@ -251,10 +253,10 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
           style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0 }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Full name */}
+          {/* Full name / Company name */}
           <div>
-            {label('Full name', true)}
-            <input type="text" autoComplete="name" placeholder="Sarah Johnson"
+            {label('Full name / Company name', true)}
+            <input type="text" autoComplete="name" placeholder="Sarah Johnson or Smith Builders Ltd"
               style={inputStyle(errors.fullName)} value={lead.fullName}
               onChange={e => { setLead(p => ({ ...p, fullName: e.target.value })); setErrors(p => ({ ...p, fullName: '' })); }}
             />

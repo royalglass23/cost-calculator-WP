@@ -4,7 +4,33 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.1.2 — 2026-05-22 (current)
+## v2.2.0 — 2026-05-22 (current)
+
+### ServiceM8 inbox integration
+- Leads are emailed to `RG_SM8_INBOX_EMAIL` immediately after save, via the shutdown hook alongside the admin notification. No cron delay.
+- Email format uses labelled plain-text fields (`Name:`, `Mobile:`, `Email:`, `Address:`, `Client:`) so ServiceM8's "Convert to Job" can auto-fill client details.
+- `RG_SM8_INBOX_EMAIL` accepts a comma-separated list — set both the SM8 address and a test address to monitor delivery side-by-side.
+- Each recipient receives a separate `wp_mail` call (not a single multi-recipient `To:` header) so ServiceM8's mail server accepts it.
+- DB column `servicem8_status` updated to `sent_to_inbox` or `failed` immediately; no cron queue.
+
+### Lead capture improvements
+- **Full name field** relabelled to "Full name / Company name" with updated placeholder.
+- **Customer type options** updated: Homeowner, Builder, Developer, Architect, Pool Builder, Other.
+- `customerType` is now included in the lead POST payload and stored in the DB (`customer_type` column, DB version bumped to `2.4.0`).
+- `customer_type` shown in the admin notification email (Contact section).
+- "Other" is silently omitted from the SM8 email body (no `Client:` line sent).
+- `pool_builder` added to the `CustomerType` union type.
+
+### Email fixes
+- Customer estimate email is now sent asynchronously via shutdown hook — "Send →" button responds instantly instead of waiting for `wp_mail`.
+- `Reply-To: support@royalglass.co.nz` hardcoded on customer estimate email.
+- `From: Royal Glass Limited` header set; overridden to `info@royalglass.co.nz` by WP Mail SMTP (Force From Email ON).
+- Admin notification email now shows `Type:` (customer type) in the Contact section.
+- `Mobile:` label used in SM8 email (maps to ServiceM8's Mobile field, not Phone).
+
+---
+
+## v2.1.2 — 2026-05-22
 
 ### Bug fixes
 - **Viking system missing from fixing method step** — `CalculatorForm.tsx` had only 4 fixing options (spigots, standoff, hidden channel, not sure). Viking was defined in types, had an image in the WP plugin assets, and existed in the old `Steps.tsx`, but was never added to `CalculatorForm.tsx` when that file was written. Added.

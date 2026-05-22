@@ -16,7 +16,7 @@ export type HardwareFinish =
   | 'powder_coated'
   | 'not_sure';
 
-export type CustomerType = 'homeowner' | 'builder' | 'architect' | 'developer' | 'other';
+export type CustomerType = 'homeowner' | 'builder' | 'architect' | 'developer' | 'pool_builder' | 'other';
 export type Timeframe = 'asap' | '1_3_months' | '3_6_months' | '6_plus_months' | 'just_planning';
 
 export interface WizardAnswers {

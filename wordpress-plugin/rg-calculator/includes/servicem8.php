@@ -77,11 +77,25 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
 
     $subject = "New Enquiry — {$name} — {$project} — Est. \${$est_low}–\${$est_high}";
 
+    $type_labels = [
+        'homeowner'    => 'Homeowner',
+        'builder'      => 'Builder',
+        'developer'    => 'Developer',
+        'architect'    => 'Architect',
+        'pool_builder' => 'Pool Builder',
+    ];
+    $client_type = $type_labels[$l['customerType']] ?? ucfirst($l['customerType'] ?: 'Not specified');
+
     $lines = [
         "Name:      {$name}",
-        "Phone:     {$l['phone']}",
+        "Mobile:    {$l['phone']}",
         "Email:     {$l['email']}",
         "Address:   {$l['address']}",
+    ];
+    if (!empty($l['customerType']) && $l['customerType'] !== 'other') {
+        $lines[] = "Client:    {$client_type}";
+    }
+    $lines = array_merge($lines, [
         "",
         "--- Project Details ---",
         "Type:      {$project}",
@@ -95,7 +109,7 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
         "--- Estimate ---",
         "Low:       \${$est_low}",
         "High:      \${$est_high}",
-    ];
+    ]);
 
     if (!empty(trim($l['notes']))) {
         $lines[] = "";
@@ -110,12 +124,12 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
 
     $body       = implode("\n", $lines);
     $recipients = array_filter(array_map('trim', explode(',', RG_SM8_INBOX_EMAIL)));
-    $sent = wp_mail(
-        $recipients,
-        $subject,
-        $body,
-        ['Content-Type: text/plain; charset=UTF-8']
-    );
+    $sent = true;
+    foreach ($recipients as $recipient) {
+        if (!wp_mail($recipient, $subject, $body, ['Content-Type: text/plain; charset=UTF-8'])) {
+            $sent = false;
+        }
+    }
 
     global $wpdb;
     $wpdb->update(

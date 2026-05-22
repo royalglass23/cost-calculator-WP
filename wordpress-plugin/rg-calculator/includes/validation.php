@@ -40,12 +40,15 @@ function rg_validate_lead(array $lead) {
  * Sanitize a lead array for database storage.
  */
 function rg_sanitize_lead(array $lead): array {
-    $consented = !empty($lead['consent']);
+    $consented     = !empty($lead['consent']);
+    $allowed_types = ['homeowner', 'builder', 'developer', 'architect', 'pool_builder', 'other'];
+    $raw_type      = sanitize_text_field($lead['customerType'] ?? '');
     return [
         'firstName'      => sanitize_text_field($lead['firstName']   ?? ''),
         'lastName'       => sanitize_text_field($lead['lastName']    ?? ''),
         'phone'          => sanitize_text_field($lead['phone']       ?? ''),
         'email'          => sanitize_email($lead['email']            ?? ''),
+        'customerType'   => in_array($raw_type, $allowed_types, true) ? $raw_type : '',
         'address'        => sanitize_text_field($lead['address']     ?? ''),
         'callPreference' => sanitize_text_field($lead['callPreference'] ?? 'anytime'),
         'notes'          => sanitize_textarea_field($lead['notes']   ?? ''),

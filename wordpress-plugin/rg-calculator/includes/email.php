@@ -13,8 +13,16 @@ function rg_send_lead_email(int $lead_id, array $lead, array $answers, array $es
         'premium_pool_fence' => 'Premium Pool Fence',
         'stair_balustrade'   => 'Stair Balustrade',
     ];
-    $project   = $project_labels[$a['scenario']] ?? $a['scenario'];
-    $name      = "{$l['firstName']} {$l['lastName']}";
+    $customer_type_labels = [
+        'homeowner'    => 'Homeowner',
+        'builder'      => 'Builder',
+        'developer'    => 'Developer',
+        'architect'    => 'Architect',
+        'pool_builder' => 'Pool Builder',
+    ];
+    $project       = $project_labels[$a['scenario']] ?? $a['scenario'];
+    $customer_type = $customer_type_labels[$l['customerType'] ?? ''] ?? ($l['customerType'] ?? '');
+    $name          = "{$l['firstName']} {$l['lastName']}";
     $est_range = '$' . number_format($e['low'], 0) . ' – $' . number_format($e['high'], 0) . ' excl. GST';
 
     $subject = "New RG Lead #{$lead_id} — {$project} — {$name}";
@@ -28,6 +36,7 @@ New lead received via the cost calculator.
 Name:       {$name}
 Phone:      {$l['phone']}
 Email:      {$l['email']}
+Type:       {$customer_type}
 Address:    {$l['address']}
 
 ─── Project ──────────────────────────────────────
