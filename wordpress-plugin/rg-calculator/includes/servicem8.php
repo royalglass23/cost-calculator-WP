@@ -64,7 +64,12 @@ function rg_sm8_quality_score(array $lead, array $est, int $loaded_at): int {
 // Uses plain-text format so SM8 "Convert to Job" can parse Name/Phone/Email/Address.
 
 function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array $est): void {
-    if (!defined('RG_SM8_INBOX_EMAIL') || !RG_SM8_INBOX_EMAIL) return;
+    error_log("RG SM8: rg_sm8_send_immediate called for lead #{$lead_id}");
+    if (!defined('RG_SM8_INBOX_EMAIL') || !RG_SM8_INBOX_EMAIL) {
+        error_log('RG SM8: RG_SM8_INBOX_EMAIL is not defined or empty in wp-config.php — skipping send');
+        return;
+    }
+    error_log('RG SM8: RG_SM8_INBOX_EMAIL = ' . RG_SM8_INBOX_EMAIL);
 
     $l = rg_sanitize_lead($lead);
     $a = rg_sanitize_answers($answers);
