@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-define('RG_DB_VERSION', '2.3.0');
+define('RG_DB_VERSION', '2.4.0');
 
 function rg_create_leads_table(): void {
     global $wpdb;
@@ -16,6 +16,7 @@ function rg_create_leads_table(): void {
         phone         VARCHAR(50)     NOT NULL DEFAULT '',
         email         VARCHAR(255)    NOT NULL DEFAULT '',
         address       TEXT            NOT NULL DEFAULT '',
+        customer_type VARCHAR(30)     NOT NULL DEFAULT '',
         call_pref     VARCHAR(20)     NOT NULL DEFAULT 'anytime',
         notes         TEXT            NOT NULL DEFAULT '',
         project_type  VARCHAR(50)     NOT NULL DEFAULT '',
@@ -63,6 +64,9 @@ function rg_create_leads_table(): void {
     if (!in_array('servicem8_sent_at', $existing, true)) {
         $wpdb->query("ALTER TABLE {$table} ADD COLUMN servicem8_sent_at DATETIME NULL AFTER servicem8_status");
     }
+    if (!in_array('customer_type', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN customer_type VARCHAR(30) NOT NULL DEFAULT '' AFTER email");
+    }
 }
 
 // Run schema migrations automatically when any admin page loads and the DB version is stale.
@@ -92,6 +96,7 @@ function rg_save_lead(array $lead, array $answers, array $est): int {
             'last_name'     => $l['lastName'],
             'phone'         => $l['phone'],
             'email'         => $l['email'],
+            'customer_type' => $l['customerType'],
             'address'       => $l['address'],
             'call_pref'     => $l['callPreference'],
             'notes'         => $l['notes'],
@@ -111,7 +116,7 @@ function rg_save_lead(array $lead, array $answers, array $est): int {
             'consent_given' => $l['consentGiven'],
             'consented_at'  => $l['consentedAt'],
         ],
-        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%s','%f','%f','%f','%d','%s','%d','%s']
+        ['%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%d','%d','%s','%s','%s','%f','%f','%f','%d','%s','%d','%s']
     );
 
     return $result ? (int) $wpdb->insert_id : 0;
