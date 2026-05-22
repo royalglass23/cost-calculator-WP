@@ -87,28 +87,29 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
     $client_type = $type_labels[$l['customerType']] ?? ucfirst($l['customerType'] ?: 'Not specified');
 
     $lines = [
-        "Name:      {$name}",
-        "Mobile:    {$l['phone']}",
-        "Email:     {$l['email']}",
-        "Address:   {$l['address']}",
+        "Name: {$name}",
+        "Phone: {$l['phone']}",
+        "Mobile: {$l['phone']}",
+        "Email: {$l['email']}",
+        "Address: {$l['address']}",
     ];
     if (!empty($l['customerType']) && $l['customerType'] !== 'other') {
-        $lines[] = "Client:    {$client_type}";
+        $lines[] = "Notes: Client type — {$client_type}";
     }
     $lines = array_merge($lines, [
         "",
         "--- Project Details ---",
-        "Type:      {$project}",
-        "Length:    {$a['length']}m",
-        "Corners:   {$a['corners']}",
-        "Gates:     {$a['gates']}",
-        "Fixing:    " . rg_sm8_label_fixing($a['fixingMethod']),
+        "Type: {$project}",
+        "Length: {$a['length']}m",
+        "Corners: {$a['corners']}",
+        "Gates: {$a['gates']}",
+        "Fixing: " . rg_sm8_label_fixing($a['fixingMethod']),
         "Substrate: " . rg_sm8_label_substrate($a['substrate']),
-        "Finish:    " . rg_sm8_label_hardware($a['hardwareFinish']),
+        "Finish: " . rg_sm8_label_hardware($a['hardwareFinish']),
         "",
         "--- Estimate ---",
-        "Low:       \${$est_low}",
-        "High:      \${$est_high}",
+        "Low: \${$est_low}",
+        "High: \${$est_high}",
     ]);
 
     if (!empty(trim($l['notes']))) {
@@ -126,8 +127,12 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
     $recipients = array_filter(array_map('trim', explode(',', RG_SM8_INBOX_EMAIL)));
     $sent = true;
     foreach ($recipients as $recipient) {
-        if (!wp_mail($recipient, $subject, $body, ['Content-Type: text/plain; charset=UTF-8'])) {
+        $result = wp_mail($recipient, $subject, $body, ['Content-Type: text/plain; charset=UTF-8']);
+        if (!$result) {
             $sent = false;
+            error_log("RG SM8: wp_mail failed for lead #{$lead_id} to {$recipient}");
+        } else {
+            error_log("RG SM8: wp_mail succeeded for lead #{$lead_id} to {$recipient}");
         }
     }
 
