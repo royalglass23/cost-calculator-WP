@@ -123,6 +123,7 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
     // ── 7. ServiceM8 — send synchronously before returning response ───────
     // Shutdown hooks are unreliable on Bluehost (not PHP-FPM). SM8 delivery
     // is critical, so we send it now. SMTP round-trip is < 1 second.
+    error_log("RG API: lead #{$lead_id} saved — calling rg_sm8_send_immediate");
     rg_sm8_send_immediate($lead_id, $lead, $answers, $est);
 
     // ── 8. Admin notification — async after response is flushed ───────────
