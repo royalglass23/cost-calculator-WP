@@ -238,7 +238,34 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
     : null;
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      <style>{`@keyframes rg-spin { to { transform: rotate(360deg); } }`}</style>
+
+      {submitting && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          background: 'rgba(255,255,255,0.92)',
+          borderRadius: '12px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '16px',
+        }}>
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '50%',
+            border: '4px solid #e5e7eb',
+            borderTopColor: '#1a3c5e',
+            animation: 'rg-spin 0.8s linear infinite',
+          }} />
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '16px', fontWeight: 600, color: '#111', margin: 0 }}>
+              Preparing your estimate…
+            </p>
+            <p style={{ fontSize: '13px', color: '#6b7280', margin: '4px 0 0' }}>
+              This usually takes a few seconds
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#111', marginBottom: '8px' }}>
         Almost there!

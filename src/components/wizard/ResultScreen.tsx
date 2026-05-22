@@ -172,7 +172,6 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
         {[
           'Straight panels — no curved glass',
           'Ground-level access',
-          'Timber or concrete substrate',
           'NZ standard height for selected scenario',
         ].map((a) => (
           <p key={a} style={{ fontSize: '13px', color: '#6b7280', marginTop: 0, marginBottom: '4px' }}>✓ {a}</p>
