@@ -4,19 +4,18 @@ if (!defined('ABSPATH')) exit;
 // ── ServiceM8 Inbox Integration ───────────────────────────────────────────────
 //
 // Flow:
-//   1. Lead saved to DB (api.php calls rg_sm8_maybe_queue)
-//   2. Quality score checked — pass: marked pending_inbox, fail: skipped
-//   3. WP-Cron fires every 15 min → rg_sm8_process_queue()
-//   4. Picks up pending_inbox leads older than 10 min
-//   5. Sends formatted plain-text email to the SM8 inbox address
-//   6. Staff sees it in SM8 inbox → "Convert to Job" auto-fills client details
+//   1. Lead saved to DB in api.php
+//   2. rg_sm8_send_immediate() fires in the shutdown hook alongside the admin email
+//   3. Sends plain-text email to RG_SM8_INBOX_EMAIL immediately
+//   4. Staff sees it in SM8 inbox → "Convert to Job" auto-fills client details
 //
 // Required constant in wp-config.php:
 //   define('RG_SM8_INBOX_EMAIL', 'de9f86@inbox.servicem8.com');
+//   (Set to royalglass666@gmail.com for testing)
 //
 // Leave undefined to disable entirely — no leads will be sent.
 
-define('RG_SM8_QUALITY_THRESHOLD', 6);
+define('RG_SM8_QUALITY_THRESHOLD', 6); // kept for reference — not used by immediate send
 
 // ── Quality scoring ───────────────────────────────────────────────────────────
 
@@ -59,7 +58,79 @@ function rg_sm8_quality_score(array $lead, array $est, int $loaded_at): int {
     return $score;
 }
 
-// ── Queue lead after quality check ────────────────────────────────────────────
+// ── Immediate send (called from shutdown hook in api.php) ─────────────────────
+//
+// Sends as soon as the lead is saved — no cron delay.
+// Uses plain-text format so SM8 "Convert to Job" can parse Name/Phone/Email/Address.
+
+function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array $est): void {
+    if (!defined('RG_SM8_INBOX_EMAIL') || !RG_SM8_INBOX_EMAIL) return;
+
+    $l = rg_sanitize_lead($lead);
+    $a = rg_sanitize_answers($answers);
+    $e = rg_sanitize_estimate($est);
+
+    $name     = trim("{$l['firstName']} {$l['lastName']}");
+    $project  = rg_sm8_label_project($a['scenario']);
+    $est_low  = number_format($e['low'],  0);
+    $est_high = number_format($e['high'], 0);
+
+    $subject = "New Enquiry — {$name} — {$project} — Est. \${$est_low}–\${$est_high}";
+
+    $lines = [
+        "Name:      {$name}",
+        "Phone:     {$l['phone']}",
+        "Email:     {$l['email']}",
+        "Address:   {$l['address']}",
+        "",
+        "--- Project Details ---",
+        "Type:      {$project}",
+        "Length:    {$a['length']}m",
+        "Corners:   {$a['corners']}",
+        "Gates:     {$a['gates']}",
+        "Fixing:    " . rg_sm8_label_fixing($a['fixingMethod']),
+        "Substrate: " . rg_sm8_label_substrate($a['substrate']),
+        "Finish:    " . rg_sm8_label_hardware($a['hardwareFinish']),
+        "",
+        "--- Estimate ---",
+        "Low:       \${$est_low}",
+        "High:      \${$est_high}",
+    ];
+
+    if (!empty(trim($l['notes']))) {
+        $lines[] = "";
+        $lines[] = "--- Customer Notes ---";
+        $lines[] = $l['notes'];
+    }
+
+    $lines[] = "";
+    $lines[] = "--- Reference ---";
+    $lines[] = "WP Lead #{$lead_id}";
+    $lines[] = admin_url("admin.php?page=rg-leads&lead={$lead_id}");
+
+    $body       = implode("\n", $lines);
+    $recipients = array_filter(array_map('trim', explode(',', RG_SM8_INBOX_EMAIL)));
+    $sent = wp_mail(
+        $recipients,
+        $subject,
+        $body,
+        ['Content-Type: text/plain; charset=UTF-8']
+    );
+
+    global $wpdb;
+    $wpdb->update(
+        $wpdb->prefix . 'rg_leads',
+        [
+            'servicem8_status'  => $sent ? 'sent_to_inbox' : 'failed',
+            'servicem8_sent_at' => $sent ? current_time('mysql') : null,
+        ],
+        ['id' => $lead_id],
+        ['%s', '%s'],
+        ['%d']
+    );
+}
+
+// ── Queue lead after quality check (kept for retry use) ───────────────────────
 
 function rg_sm8_maybe_queue(int $lead_id, array $lead, array $est, int $loaded_at): void {
     if (!defined('RG_SM8_INBOX_EMAIL') || !RG_SM8_INBOX_EMAIL) return;

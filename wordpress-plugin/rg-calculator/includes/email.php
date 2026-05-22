@@ -257,7 +257,8 @@ HTML;
 
     $headers = [
         'Content-Type: text/html; charset=UTF-8',
-        "Reply-To: {$from_email}",
+        'From: Royal Glass Limited <support@royalglass.co.nz>',
+        "Reply-To: <support@royalglass.co.nz>",
     ];
 
     return (bool) wp_mail(sanitize_email($to_email), $subject, $html, $headers);
