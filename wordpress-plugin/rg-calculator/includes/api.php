@@ -120,20 +120,17 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         return rg_error('Unable to save lead. Please call us on 0800 769 254.', 500);
     }
 
-    // ── 7. Queue for ServiceM8 inbox (quality-gated, cron-dispatched) ─────
-    rg_sm8_maybe_queue($lead_id, $lead, $est, $loaded_at);
-    // ── 8. Send email notification (after response is flushed) ────────────
+    // ── 7. Send emails after response is flushed ──────────────────────────
     // Capture in local vars for the closure — avoids reference issues.
     $email_lead_id = $lead_id;
     $email_lead    = $lead;
     $email_answers = $answers;
     $email_est     = $est;
     add_action('shutdown', function() use ($email_lead_id, $email_lead, $email_answers, $email_est) {
-        // On PHP-FPM hosts this flushes the response to the browser first,
-        // so the user sees success immediately while email sends in background.
         if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
         ignore_user_abort(true);
         rg_send_lead_email($email_lead_id, $email_lead, $email_answers, $email_est);
+        rg_sm8_send_immediate($email_lead_id, $email_lead, $email_answers, $email_est);
     });
 
     return new WP_REST_Response(['ok' => true, 'leadId' => $lead_id], 201);
@@ -197,18 +194,17 @@ function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {
         set_transient($key, $count + 1, HOUR_IN_SECONDS);
     }
 
-    $sent = rg_send_estimate_email_to_customer($email, $first_name, $answers, $estimate);
+    // Fire-and-forget via shutdown hook — respond immediately, email sends in background.
+    $async_email    = $email;
+    $async_name     = $first_name;
+    $async_answers  = $answers;
+    $async_estimate = $estimate;
+    add_action('shutdown', function() use ($async_email, $async_name, $async_answers, $async_estimate) {
+        if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+        ignore_user_abort(true);
+        rg_send_estimate_email_to_customer($async_email, $async_name, $async_answers, $async_estimate);
+    });
 
-    if (!$sent) {
-        error_log(sprintf(
-            'RG Calculator estimate email failed for %s from IP %s',
-            $email,
-            $ip
-        ));
-
-        return rg_error('We could not send the email right now. Please try again, or call us on 0800 769 254.', 502);
-    }
-    
     return new WP_REST_Response(['ok' => true], 200);
 }
 
