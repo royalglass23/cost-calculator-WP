@@ -93,7 +93,7 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
 
     $lines = [
         "Name: {$name}",
-        "Phone: {$l['phone']}",
+        // "Phone: {$l['phone']}",  // removed — SM8 maps Mobile correctly
         "Mobile: {$l['phone']}",
         "Email: {$l['email']}",
         "Address: {$l['address']}",
