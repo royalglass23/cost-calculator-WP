@@ -10,7 +10,7 @@ export type FixingMethod =
   | 'spigot_round'
   | 'standoff_posts'
   | 'viking'
-    'jh_clamps'
+  | 'jh_clamps'
   | 'side_channel'
   | 'top_channel'
   | 'aluminium_1'

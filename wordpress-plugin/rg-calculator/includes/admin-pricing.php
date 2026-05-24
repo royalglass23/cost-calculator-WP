@@ -69,7 +69,6 @@ function rg_admin_pricing_page(): void {
             'fixingMethodSurcharge' => [
                 'spigot_round'   => (float) ($_POST['fix_spigot_round']   ?? 0),
                 'standoff_posts' => (float) ($_POST['fix_standoff_posts'] ?? 0),
-                'hidden_channel' => (float) ($_POST['fix_hidden_channel'] ?? 0),
                 'viking'         => (float) ($_POST['fix_viking']         ?? 0),
                 'side_channel'   => (float) ($_POST['fix_side_channel']   ?? 0),
                 'top_channel'    => (float) ($_POST['fix_top_channel']    ?? 0),
@@ -100,7 +99,7 @@ function rg_admin_pricing_page(): void {
         'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
         'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
         'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
-        'fixingMethodSurcharge'    => ['spigot_round' => 0, 'standoff_posts' => 0, 'hidden_channel' => 0, 'viking' => 0, 'side_channel' => 0, 'top_channel' => 0, 'aluminium_1' => 0, 'aluminium_2' => 0, 'jh_clamps' => 0, 'sed' => 0, 'not_sure' => 0],
+        'fixingMethodSurcharge'    => ['spigot_round' => 0, 'standoff_posts' => 0, 'viking' => 0, 'side_channel' => 0, 'top_channel' => 0, 'aluminium_1' => 0, 'aluminium_2' => 0, 'jh_clamps' => 0, 'sed' => 0],
         'interlikingRailsSurcharge' => 0,
         'rangeLowPercent'          => 90,
         'rangeHighPercent'         => 120,
@@ -253,7 +252,6 @@ function rg_admin_pricing_page(): void {
                 $fixing_rows = [
                     ['spigot_round',   'Spigot Round',    $fm['spigot_round']   ?? 0],
                     ['standoff_posts', 'Stand-off Posts', $fm['standoff_posts'] ?? 0],
-                    ['hidden_channel', 'Hidden Channel',  $fm['hidden_channel'] ?? 0],
                     ['viking',         'Viking System',   $fm['viking']         ?? 0],
                     ['side_channel',   'Side Channel',    $fm['side_channel']   ?? 0],
                     ['top_channel',    'Top Channel',     $fm['top_channel']    ?? 0],
