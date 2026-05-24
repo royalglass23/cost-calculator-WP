@@ -16,6 +16,18 @@ export const DEFAULT_PRICING: PricingConfig = {
     powder_coated:   22,
     not_sure:        0,
   },
+  fixingMethodSurcharge: {
+    spigot_round:   0,
+    standoff_posts: 0,
+    viking:         0,
+    jh_clamps:      0,
+    side_channel:   0,
+    top_channel:    0,
+    aluminium_1:    0,
+    aluminium_2:    0,
+    sed:            0,
+    
+  },
   glassTypeSurcharge: {
     toughened_12mm: 0,
     laminated:      0,  // placeholder — set via WP admin
@@ -88,10 +100,15 @@ export const IMAGES = {
   colourFrosted: img('clarity-frosted.jpg'),
 
   // Fixing method
-  spigots:       img('fix-spigots.jpg'),
+  spigotRound:   img('fix-spigots.jpg'),
   standoff:      img('fix-standoff.jpg'),
-  hiddenChannel: img('fix-channel.jpg'),
-  viking:        img('fix-viking.jpg'), 
+  viking:        img('fix-viking.jpg'),
+  jhClamps:      img('not-sure.jpg'),
+  sideChannel:   img('not-sure.jpg'),
+  topChannel:    img('not-sure.jpg'),
+  aluminiumOne:  img('not-sure.jpg'),
+  aluminiumTwo:  img('not-sure.jpg'),
+  sed:           img('not-sure.jpg'),
 
   // Hardware finish
   chrome:        img('finish-chrome.jpg'),

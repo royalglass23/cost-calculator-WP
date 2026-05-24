@@ -6,7 +6,16 @@ export type Scenario =
 
 export type GlassType = 'toughened_12mm' | 'laminated';
 export type GlassColour = 'clear' | 'low_iron' | 'tinted' | 'frosted';
-export type FixingMethod = 'spigots' | 'standoff_posts' | 'hidden_channel' | 'viking' | 'not_sure';
+export type FixingMethod =
+  | 'spigot_round'
+  | 'standoff_posts'
+  | 'viking'
+    'jh_clamps'
+  | 'side_channel'
+  | 'top_channel'
+  | 'aluminium_1'
+  | 'aluminium_2'
+  | 'sed';
 export type SubstrateType = 'timber' | 'concrete' | 'tile' | 'steel' | 'not_sure';
 
 export type HardwareFinish =
@@ -56,6 +65,7 @@ export interface PricingConfig {
   minimumLength: number;
   cornerSurcharge: number;
   hardwareFinishSurcharge: Record<HardwareFinish, number>;
+  fixingMethodSurcharge: Record<FixingMethod, number>;
   glassTypeSurcharge: Record<GlassType, number>;
   glassColourSurcharge: Record<GlassColour, number>;
   interlikingRailsSurcharge: number;
@@ -75,6 +85,7 @@ export interface EstimateResult {
     gates: number;
     corners: number;
     hardwareSurcharge: number;
+    fixingMethodSurcharge: number;
     glassTypeSurcharge: number;
     glassColourSurcharge: number;
     interlikingRails: number;

@@ -129,10 +129,10 @@ const GLASS_COLOURS: Array<{ value: GlassColour; title: string; description: str
 
 const FIXING_OPTIONS: Array<{ value: FixingMethod; title: string; description: string; image: string }> = [
   {
-    value: "spigots",
-    title: "Spigots",
-    description: "Round or square posts drilled into the floor — most common",
-    image: IMAGES.spigots,
+    value: "spigot_round",
+    title: "Spigot Round",
+    description: "Round posts drilled into the floor — available as sp10, sp13, and sp14",
+    image: IMAGES.spigotRound,
   },
   {
     value: "standoff_posts",
@@ -141,22 +141,46 @@ const FIXING_OPTIONS: Array<{ value: FixingMethod; title: string; description: s
     image: IMAGES.standoff,
   },
   {
-    value: "hidden_channel",
-    title: "Hidden Channel",
-    description: "Glass appears to float — recessed channel in the floor",
-    image: IMAGES.hiddenChannel,
-  },
-  {
     value: "viking",
     title: "Viking System",
     description: "Top-clamping posts — no floor drilling required",
     image: IMAGES.viking,
   },
   {
-    value: "not_sure",
-    title: "Not Sure",
-    description: "Our team will recommend the best option on site",
-    image: IMAGES.notSure,
+    value: "jh_clamps",
+    title: "JH Clamps",
+    description: "Adjustable JH clamp system for securing glass panels",
+    image: IMAGES.jhClamps,
+  },
+  {
+    value: "side_channel",
+    title: "Side Channel",
+    description: "Glass secured via a channel mounted to the side of the structure",
+    image: IMAGES.sideChannel,
+  },
+  {
+    value: "top_channel",
+    title: "Top Channel",
+    description: "Glass secured via a channel mounted along the top",
+    image: IMAGES.topChannel,
+  },
+  {
+    value: "aluminium_1",
+    title: "Aluminium 1",
+    description: "Aluminium framing system — type 1 configuration",
+    image: IMAGES.aluminiumOne,
+  },
+  {
+    value: "aluminium_2",
+    title: "Aluminium 2",
+    description: "Aluminium framing system — type 2 configuration",
+    image: IMAGES.aluminiumTwo,
+  },
+  {
+    value: "sed",
+    title: "SED",
+    description: "Special Engineer Design — custom solution, our team will be in touch to discuss requirements",
+    image: IMAGES.sed,
   },
 ];
 
@@ -271,6 +295,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       content: (
         <>
           <StepHero src={IMAGES.balcony} alt="Glass fencing project" />
+          <StepNote>Sample image for illustration purposes only. Actual product and installation may vary.</StepNote>
           {answers.scenario === "stair_balustrade" ? (
             <>
               <SliderInput
@@ -318,6 +343,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       content: (
         <>
           <StepHero src={IMAGES.corners} alt="How to count corners" />
+          <StepNote>Sample image for illustration purposes only. Actual product and installation may vary.</StepNote>
           <SliderInput
             label="Corners"
             value={answers.corners}
@@ -337,6 +363,7 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       content: (
         <>
           <StepHero src={IMAGES.gates} alt="Frameless glass pool gate with self-closing latch" />
+          <StepNote>Sample image for illustration purposes only. Actual product and installation may vary.</StepNote>
           <SliderInput
             label="Gates"
             value={answers.gates}
@@ -407,9 +434,9 @@ export function CalculatorForm({ answers, onChange, onGetEstimate }: Props) {
       content: (
         <>
           <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#6b7280" }}>
-            This is a preference — no price impact. Our team will confirm suitability on site.
+            Choose your preferred fixing method. Our team will confirm suitability on site.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "12px" }}>
             {FIXING_OPTIONS.map((option) => (
               <SelectionCard
                 key={option.value}

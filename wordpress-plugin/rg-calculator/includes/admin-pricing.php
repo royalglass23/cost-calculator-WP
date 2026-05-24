@@ -66,6 +66,19 @@ function rg_admin_pricing_page(): void {
                 'frosted'  => (float) ($_POST['glass_colour_frosted']  ?? 0),
                 'low_iron' => (float) ($_POST['glass_colour_low_iron'] ?? 0),
             ],
+            'fixingMethodSurcharge' => [
+                'spigot_round'   => (float) ($_POST['fix_spigot_round']   ?? 0),
+                'standoff_posts' => (float) ($_POST['fix_standoff_posts'] ?? 0),
+                'hidden_channel' => (float) ($_POST['fix_hidden_channel'] ?? 0),
+                'viking'         => (float) ($_POST['fix_viking']         ?? 0),
+                'side_channel'   => (float) ($_POST['fix_side_channel']   ?? 0),
+                'top_channel'    => (float) ($_POST['fix_top_channel']    ?? 0),
+                'aluminium_1'    => (float) ($_POST['fix_aluminium_1']    ?? 0),
+                'aluminium_2'    => (float) ($_POST['fix_aluminium_2']    ?? 0),
+                'jh_clamps'      => (float) ($_POST['fix_jh_clamps']      ?? 0),
+                'sed'            => (float) ($_POST['fix_sed']            ?? 0),
+                'not_sure'       => 0,
+            ],
             'interlikingRailsSurcharge' => (float) ($_POST['interlinking_rails'] ?? 0),
             'rangeLowPercent'  => (int) ($_POST['rangeLowPercent']  ?? 90),
             'rangeHighPercent' => (int) ($_POST['rangeHighPercent'] ?? 120),
@@ -87,6 +100,7 @@ function rg_admin_pricing_page(): void {
         'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
         'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
         'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
+        'fixingMethodSurcharge'    => ['spigot_round' => 0, 'standoff_posts' => 0, 'hidden_channel' => 0, 'viking' => 0, 'side_channel' => 0, 'top_channel' => 0, 'aluminium_1' => 0, 'aluminium_2' => 0, 'jh_clamps' => 0, 'sed' => 0, 'not_sure' => 0],
         'interlikingRailsSurcharge' => 0,
         'rangeLowPercent'          => 90,
         'rangeHighPercent'         => 120,
@@ -101,6 +115,7 @@ function rg_admin_pricing_page(): void {
 
     $sc  = $p['scenarios'];
     $hw  = $p['hardwareFinishSurcharge'];
+    $fm  = $p['fixingMethodSurcharge'];
     $gt  = $p['glassTypeSurcharge'];
     $gc  = $p['glassColourSurcharge'];
     $ir  = $p['interlikingRailsSurcharge'];
@@ -230,6 +245,37 @@ function rg_admin_pricing_page(): void {
                 </tbody>
             </table>
 
+            <h2 style="margin-top:2rem">Fixing Method Surcharges ($/m)</h2>
+            <p style="color:#666;font-size:13px">Applied per linear metre based on the selected fixing method. Set to 0 to include cost in the base rate. SED always triggers a consultation flag regardless of surcharge.</p>
+            <table class="form-table" style="max-width:500px">
+                <tbody>
+                <?php
+                $fixing_rows = [
+                    ['spigot_round',   'Spigot Round',    $fm['spigot_round']   ?? 0],
+                    ['standoff_posts', 'Stand-off Posts', $fm['standoff_posts'] ?? 0],
+                    ['hidden_channel', 'Hidden Channel',  $fm['hidden_channel'] ?? 0],
+                    ['viking',         'Viking System',   $fm['viking']         ?? 0],
+                    ['side_channel',   'Side Channel',    $fm['side_channel']   ?? 0],
+                    ['top_channel',    'Top Channel',     $fm['top_channel']    ?? 0],
+                    ['aluminium_1',    'Aluminium 1',     $fm['aluminium_1']    ?? 0],
+                    ['aluminium_2',    'Aluminium 2',     $fm['aluminium_2']    ?? 0],
+                    ['jh_clamps',      'JH Clamps',       $fm['jh_clamps']      ?? 0],
+                    ['sed',            'SED',             $fm['sed']            ?? 0],
+                ];
+                foreach ($fixing_rows as [$key, $label, $val]):
+                ?>
+                <tr>
+                    <th scope="row"><label for="fix_<?= esc_attr($key) ?>"><?= esc_html($label) ?></label></th>
+                    <td>
+                        <input type="number" id="fix_<?= esc_attr($key) ?>" name="fix_<?= esc_attr($key) ?>"
+                               value="<?= esc_attr($val) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                        <span class="description"> $/m</span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
             <h2 style="margin-top:2rem">Other Settings</h2>
             <table class="form-table" style="max-width:500px">
                 <tbody>
@@ -279,9 +325,10 @@ Gate cost            = number of gates × gate price  (Pool Fence only)
 Glass type surcharge = billable length × glass type surcharge/m
 Glass colour surcharge = billable length × colour surcharge/m
 Interlinking rails   = billable length × interlinking rails surcharge/m  (if ticked)
+Fixing surcharge     = billable length × fixing method surcharge/m
 Finish surcharge     = billable length × finish surcharge/m
 
-Subtotal             = base + corners + gates + glass type + glass colour + interlinking + finish
+Subtotal             = base + corners + gates + fixing + glass type + glass colour + interlinking + finish
 Low estimate         = subtotal × rangeLowPercent  / 100
 High estimate        = subtotal × rangeHighPercent / 100
                 </code>
