@@ -18,7 +18,7 @@ export function calculateEstimate(
       high: 0,
       needsCallUs: answers.callTriggers.length > 0,
       consultationFlags: [],
-      breakdown: { base: 0, gates: 0, corners: 0, hardwareSurcharge: 0, glassTypeSurcharge: 0, glassColourSurcharge: 0, interlikingRails: 0 },
+      breakdown: { base: 0, gates: 0, corners: 0, hardwareSurcharge: 0, fixingMethodSurcharge: 0, glassTypeSurcharge: 0, glassColourSurcharge: 0, interlikingRails: 0 },
     };
   }
 
@@ -46,7 +46,11 @@ export function calculateEstimate(
   const interlikingRails =
     answers.interlikingRails ? effectiveLength * pricing.interlikingRailsSurcharge : 0;
 
-  const subtotal = base + gates + corners + hardwareSurcharge + glassTypeSurcharge + glassColourSurcharge + interlikingRails;
+  const fixingMethodSurchargePerMetre =
+    pricing.fixingMethodSurcharge?.[answers.fixingMethod ?? 'not_sure'] ?? 0;
+  const fixingMethodSurcharge = effectiveLength * fixingMethodSurchargePerMetre;
+
+  const subtotal = base + gates + corners + hardwareSurcharge + fixingMethodSurcharge + glassTypeSurcharge + glassColourSurcharge + interlikingRails;
 
   const roundToNearest = (n: number, to = 50) => Math.round(n / to) * to;
 
@@ -54,6 +58,7 @@ export function calculateEstimate(
   const high = roundToNearest(subtotal * (pricing.rangeHighPercent / 100));
   const consultationFlags: string[] = [];
     if (answers.fixingMethod === 'not_sure')   consultationFlags.push('Fixing method to be confirmed on site');
+    if (answers.fixingMethod === 'sed')        consultationFlags.push('Special Engineer Design required — our team will be in touch to discuss requirements');
     if (answers.hardwareFinish === 'not_sure') consultationFlags.push('Hardware finish to be confirmed');
     if (answers.substrate === 'not_sure')      consultationFlags.push('Substrate to be confirmed on site');
 
@@ -64,7 +69,7 @@ export function calculateEstimate(
     high,
     needsCallUs: answers.callTriggers.length > 0,
     consultationFlags, 
-    breakdown: { base, gates, corners, hardwareSurcharge, glassTypeSurcharge, glassColourSurcharge, interlikingRails },
+    breakdown: { base, gates, corners, hardwareSurcharge, fixingMethodSurcharge, glassTypeSurcharge, glassColourSurcharge, interlikingRails },
   };
 }
 
