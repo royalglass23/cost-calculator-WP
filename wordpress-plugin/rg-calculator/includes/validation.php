@@ -94,11 +94,14 @@ function rg_sanitize_answers(array $answers): array {
  * Sanitize estimate data for storage.
  */
 function rg_sanitize_estimate(array $est): array {
+    $low  = max(0.0, min((float) ($est['low']  ?? $est['estimate_low']  ?? 0), 999999.0));
+    $high = max(0.0, min((float) ($est['high'] ?? $est['estimate_high'] ?? 0), 999999.0));
+    if ($low > $high) { $high = $low; }
     return [
-        'low'        => (float) ($est['low']      ?? $est['estimate_low']  ?? 0),
-        'high'       => (float) ($est['high']     ?? $est['estimate_high'] ?? 0),
-        'subtotal'   => (float) ($est['subtotal'] ?? 0),
-        'needsCallUs'=> (bool)  ($est['needsCallUs'] ?? false),
+        'low'         => $low,
+        'high'        => $high,
+        'subtotal'    => max(0.0, min((float) ($est['subtotal'] ?? 0), 999999.0)),
+        'needsCallUs' => (bool) ($est['needsCallUs'] ?? false),
     ];
 }
 
