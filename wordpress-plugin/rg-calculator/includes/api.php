@@ -120,13 +120,7 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         return rg_error('Unable to save lead. Please call us on 0800 769 254.', 500);
     }
 
-    // ── 7. ServiceM8 — send synchronously before returning response ───────
-    // Shutdown hooks are unreliable on Bluehost (not PHP-FPM). SM8 delivery
-    // is critical, so we send it now. SMTP round-trip is < 1 second.
-    error_log("RG API: lead #{$lead_id} saved — calling rg_sm8_send_immediate");
-    rg_sm8_send_immediate($lead_id, $lead, $answers, $est);
-
-    // ── 8. Admin notification — async after response is flushed ───────────
+    // ── 7. All emails — async after response is flushed ──────────────────
     $email_lead_id = $lead_id;
     $email_lead    = $lead;
     $email_answers = $answers;
@@ -135,6 +129,12 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
         ignore_user_abort(true);
         rg_send_lead_email($email_lead_id, $email_lead, $email_answers, $email_est);
+        rg_sm8_send_immediate($email_lead_id, $email_lead, $email_answers, $email_est);
+        $customer_email = sanitize_email($email_lead['email'] ?? '');
+        $customer_name  = sanitize_text_field($email_lead['firstName'] ?? '');
+        if (is_email($customer_email)) {
+            rg_send_estimate_email_to_customer($customer_email, $customer_name, $email_answers, $email_est);
+        }
     });
 
     return new WP_REST_Response(['ok' => true, 'leadId' => $lead_id], 201);
