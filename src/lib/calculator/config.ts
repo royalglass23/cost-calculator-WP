@@ -50,13 +50,14 @@ export const DEFAULT_PRICING: PricingConfig = {
 function getPluginBase(): string {
   if (typeof document === 'undefined') return '/wp-content/plugins/rg-calculator/assets/';
 
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return '/wordpress-plugin/rg-calculator/assets/';
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cfg = (window as any).rgCalculatorConfig;
   if (cfg?.assetsUrl) return cfg.assetsUrl;
+
+  // Fallback for Vite dev server (no WordPress present)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return '/wordpress-plugin/rg-calculator/assets/';
+  }
 
   const script = document.querySelector('script[src*="rg-calculator.js"]') as HTMLScriptElement | null;
   if (script?.src) {
@@ -106,15 +107,15 @@ export const IMAGES = {
   jhClamps:      img('fix-jh-clamp.jpg'),
   sideChannel:   img('fix-side-channel.jpg'),
   topChannel:    img('fix-top-channel.jpg'),
-  aluminiumOne:  img('not-sure.jpg'),
-  aluminiumTwo:  img('not-sure.jpg'),
+  aluminiumOne:  img('fix-alu1.jpg'),
+  aluminiumTwo:  img('fix-alu2.jpg'),
   sed:           img('not-sure.jpg'),
 
   // Hardware finish
   chrome:        img('finish-chrome.jpg'),
   matteBlack:    img('finish-black.jpg'),
   brushedChrome: img('finish-brushed.jpg'),
-  powderCoated:  img('finish-brass.jpg'),
+  powderCoated:  img('finish-powder.jpg'),
   finishCustom:  img('finish-custom.jpg'),
   notSure:       img('not-sure.jpg'),
 
