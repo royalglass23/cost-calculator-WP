@@ -172,6 +172,10 @@ function rg_check_rate_limit(string $ip): bool {
 }
 
 function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {
+    if (!wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')) {
+        return rg_error('Invalid request', 403);
+    }
+
     $body = $request->get_json_params();
     if (!is_array($body)) return rg_error('Invalid request', 400);
 

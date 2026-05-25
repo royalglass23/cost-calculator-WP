@@ -69,8 +69,6 @@ function rg_sm8_send_immediate(int $lead_id, array $lead, array $answers, array 
         error_log('RG SM8: RG_SM8_INBOX_EMAIL is not defined or empty in wp-config.php — skipping send');
         return;
     }
-    error_log('RG SM8: RG_SM8_INBOX_EMAIL = ' . RG_SM8_INBOX_EMAIL);
-
     $l = rg_sanitize_lead($lead);
     $a = rg_sanitize_answers($answers);
     $e = rg_sanitize_estimate($est);
