@@ -245,7 +245,7 @@ function rg_admin_pricing_page(): void {
             </table>
 
             <h2 style="margin-top:2rem">Fixing Method Surcharges ($/m)</h2>
-            <p style="color:#666;font-size:13px">Applied per linear metre based on the selected fixing method. Set to 0 to include cost in the base rate. SED always triggers a consultation flag regardless of surcharge.</p>
+            <p style="color:#666;font-size:13px">Applied per linear metre based on the selected fixing method. Use negative values for cheaper methods (e.g. −100 = $100/m discount). Set to 0 to include cost in the base rate. SED always triggers a consultation flag regardless of surcharge.</p>
             <table class="form-table" style="max-width:500px">
                 <tbody>
                 <?php
@@ -266,7 +266,7 @@ function rg_admin_pricing_page(): void {
                     <th scope="row"><label for="fix_<?= esc_attr($key) ?>"><?= esc_html($label) ?></label></th>
                     <td>
                         <input type="number" id="fix_<?= esc_attr($key) ?>" name="fix_<?= esc_attr($key) ?>"
-                               value="<?= esc_attr($val) ?>" step="any" min="0" style="width:100px" class="regular-text">
+                               value="<?= esc_attr($val) ?>" step="any" style="width:100px" class="regular-text">
                         <span class="description"> $/m</span>
                     </td>
                 </tr>
