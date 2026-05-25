@@ -211,10 +211,10 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
           </div>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1a3c5e', marginTop: 0, marginBottom: '3px' }}>
-              Get this estimate in your inbox
+              Share this estimate
             </h3>
             <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>
-              {firstName ? `Hi ${firstName} — we'll` : "We'll"} send you a personal copy. Forward it to your builder, partner, or architect.
+              {firstName ? `A copy is on its way to ${firstName}'s inbox.` : 'A copy is on its way to your inbox.'} Forward to a builder, partner, or architect below.
             </p>
           </div>
         </div>
@@ -265,7 +265,7 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
               <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px', marginBottom: 0 }}>{sendError}</p>
             )}
             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px', marginBottom: 0 }}>
-              Want to share with your builder or partner? Change the address above.
+              Enter a different address to forward to your builder, partner, or architect.
             </p>
           </>
         )}
