@@ -205,21 +205,18 @@ const FINISH_OPTIONS: Array<{ value: HardwareFinish; title: string; description:
     title: "Matte Black",
     description: "Most popular premium finish",
     image: IMAGES.matteBlack,
-    surcharge: "+$15/m",
   },
   {
     value: "brushed_chrome",
     title: "Brushed Chrome",
     description: "Subtle step up from standard",
     image: IMAGES.brushedChrome,
-    surcharge: "+$12/m",
   },
   {
     value: "powder_coated",
     title: "Powder Coated",
     description: "Durable colour coating — range of colours available",
     image: IMAGES.powderCoated,
-    surcharge: "+$22/m",
   },
   {
     value: "not_sure",
