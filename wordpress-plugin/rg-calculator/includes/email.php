@@ -25,7 +25,7 @@ function rg_send_lead_email(int $lead_id, array $lead, array $answers, array $es
     $name          = "{$l['firstName']} {$l['lastName']}";
     $est_range = '$' . number_format($e['low'], 0) . ' – $' . number_format($e['high'], 0) . ' excl. GST';
 
-    $subject = "New RG Lead #{$lead_id} — {$project} — {$name}";
+    $subject = "New Enquiry Lead#{$lead_id} - {$project} - {$name}";
 
     $notes_block = $l['notes'] ? "\nNotes from customer:\n{$l['notes']}\n" : '';
 
