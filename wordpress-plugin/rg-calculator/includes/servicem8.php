@@ -306,7 +306,7 @@ function rg_sm8_email_body(object $lead): string {
 
 function rg_sm8_label_project(string $v): string {
     return [
-        'ground_level'       => 'Ground Level Balustrade',
+        'ground_level'       => 'Ground Level Fence',
         'balcony_balustrade' => 'Balcony / Deck Balustrade',
         'premium_pool_fence' => 'Pool Fence',
         'stair_balustrade'   => 'Stair Balustrade',

@@ -4,7 +4,57 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.2.0 — 2026-05-22 (current)
+## v2.3.1 — 2026-06-11 (current)
+
+### Bug fixes
+
+- **Fixing method labels stale in result screen and customer email** — `FIXING_LABELS` in `ResultScreen.tsx` and `$fixing_map` in `email.php` still referenced the old v2.0 slugs (`spigots`, `hidden_channel`, `not_sure`) from before the 9-method expansion in v2.3.0. All 7 of the newer methods (`spigot_round`, `jh_clamps`, `side_channel`, `top_channel`, `aluminium_1`, `aluminium_2`, `sed`) were falling back to raw slugs when displayed in the estimate summary and customer email. Updated both maps to match the current fixing method set.
+- **"Ground Level Fence" label aligned** — `servicem8.php` was using "Ground Level Balustrade" while all other label maps used "Ground Level Fence". Aligned to "Ground Level Fence" across all files.
+
+### Documentation
+
+- `CLAUDE.md` — corrected consultation triggers (removed dead `fixingMethod === 'not_sure'` entry; `not_sure` is not a valid `FixingMethod` value); added stair-specific Step 2 behaviour and gate warning note; restored missing security issue #8 (FIXED); added `assetsUrl` to `getConfig()` property list.
+- `README.md` — fixed "7-step wizard" to "9-step wizard".
+
+---
+
+## v2.3.0 — 2026-05-26
+
+### Expanded fixing method options with per-method pricing
+
+- **9 distinct fixing methods** now supported: Round Spigot (`spigot_round`), Stand-off Posts (`standoff_posts`), Viking System (`viking`), JH Clamps (`jh_clamps`), Side Channel (`side_channel`), Top Channel (`top_channel`), Aluminium 1 (`aluminium_1`), Aluminium 2 (`aluminium_2`), SED (`sed`).
+- `fixingMethodSurcharge` map added to `PricingConfig` — each method carries a configurable $/m surcharge editable from WP admin.
+- Pricing engine updated: `fixingMethodSurcharge` applied per effective metre in `calculateEstimate()` and included in `EstimateResult.breakdown`.
+- Admin pricing page has a new **Fixing Method Surcharges** table for all 9 methods; inputs accept **negative values** to represent methods cheaper than the base rate.
+- `SED` always triggers a consultation flag ("Special Engineer Design required — our team will be in touch") regardless of surcharge value.
+- Images added for all 9 fixing methods in the `IMAGES` map and plugin assets directory.
+
+### Automatic customer estimate email on lead submit
+
+- Customer estimate email is now **auto-sent asynchronously on lead submit** (inside the shutdown hook alongside admin notification and SM8) — customer no longer needs to click "Get this estimate in your inbox" to receive it.
+- **ServiceM8 email moved back to async** — was briefly synchronous (for Bluehost reliability); all three emails (admin, SM8, customer) now fire together in the shutdown hook.
+- `ResultScreen.tsx` updated: send-to-email panel now reads **"Share this estimate"** with copy confirming the email is already on its way; the email input is retained so the customer can forward to a builder, partner, or architect at a different address.
+- `/estimate-email` endpoint is retained for forwarding requests.
+
+### Security fixes
+
+- **`/estimate-email` nonce verification** — `wp_verify_nonce($request->get_header('X-WP-Nonce'), 'wp_rest')` now required on every request. Unauthenticated requests return `403`. Addresses security issue #2 (partial — Turnstile/honeypot still absent but nonce prevents unauthenticated bulk abuse).
+- **Estimate value bounds clamping** — `rg_sanitize_estimate()` now clamps `low`, `high`, and `subtotal` to `0–999,999 NZD`; automatically corrects `low > high`. Addresses security issue #4.
+
+### Bug fixes
+
+- **Duplicate sections in admin email** — `email.php` was emitting a section separator twice; fixed.
+- **Negative surcharges blocked in admin UI** — fixing method surcharge inputs previously had `min="0"` preventing negative values. Removed; negative values are now accepted (e.g. a cheaper method can carry a −$100/m discount).
+
+### Image updates
+
+- `finish-brass.jpg` removed (Brass hardware option retired); `finish-powder.jpg` added for Powder Coated finish.
+- `fix-alu2.png` renamed/replaced with `fix-alu1.jpg`.
+- All wizard images re-compressed.
+
+---
+
+## v2.2.0 — 2026-05-22
 
 ### ServiceM8 inbox integration
 - Leads are emailed to `RG_SM8_INBOX_EMAIL` immediately after save, via the shutdown hook alongside the admin notification. No cron delay.

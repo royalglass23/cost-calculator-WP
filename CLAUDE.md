@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/estimate`, fill in a 7-step wizard describing their frameless glass balustrade or pool fence project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), emails Royal Glass staff asynchronously, and returns a success response.
+A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/estimate`, fill in a 9-step wizard describing their frameless glass balustrade or pool fence project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), sends three emails asynchronously (admin notification, ServiceM8 inbox, customer estimate), and returns a success response.
 
 There is no Node.js server, no Cloudflare Workers, and no Supabase in the production path.
 
@@ -63,9 +63,9 @@ State lives entirely in `App.tsx` local React state. No global state library is 
 | # | Title | Conditional? |
 |---|---|---|
 | 1 | What's your project? (scenario) | Always |
-| 2 | Total length of glass run | Always |
+| 2 | Total length of glass run | Always — for `stair_balustrade` splits into two sliders: "Stair run" + "Landing area" |
 | 3 | How many corners? | Hidden for `stair_balustrade` |
-| 4 | How many gates? | Only for `premium_pool_fence` |
+| 4 | How many gates? | Only for `premium_pool_fence`; warning shown if 0 gates selected |
 | 5 | Glass type | Hidden for `ground_level` and `premium_pool_fence` |
 | 6 | Glass colour | Always |
 | 7 | How will the glass be fixed? (fixing method) | Always |
@@ -80,25 +80,26 @@ State lives entirely in `App.tsx` local React state. No global state library is 
 | `engine.ts` | Pure function `calculateEstimate(answers, pricing) -> EstimateResult`. No side effects. |
 | `types.ts` | TypeScript interfaces for `WizardAnswers`, `LeadData`, `EstimateResult`, `PricingConfig`. |
 
-**Estimate always shows a price.** The engine computes a low/high range for every input combination. `consultationReasons` is a list of strings flagging unknowns or special cases (shown as an amber bar below the price on screen and in the customer email). These never block the price — they are informational only.
+**Estimate always shows a price.** The engine computes a low/high range for every input combination. `consultationFlags` is a list of strings flagging unknowns or special cases (shown as an amber bar below the price on screen and in the customer email). These never block the price — they are informational only.
 
 **Current consultation triggers** (flags only — do not hide price):
-- Height `less_than_1m` — NZ Building Code compliance check required
-- Height `not_sure` — estimated at standard 1m
-- Height `custom` — final price may vary
-- Fixing method `not_sure` — to be confirmed on site
-- Hardware finish `not_sure` — estimated at standard chrome
-- Hardware finish `custom` — pricing may vary
+- Fixing method `sed` — Special Engineer Design required (always flagged regardless of surcharge)
+- Hardware finish `not_sure` — to be confirmed
+- Substrate `not_sure` — to be confirmed on site
 
 **Hardware surcharge** applies only to `matte_black`, `brushed_chrome`, `powder_coated` finishes.
 
-**To change prices:** Edit only `config.ts`. Run `npm run build` and redeploy.
+**Fixing method surcharge** applies per effective metre for each of the 9 methods. All default to 0 but are editable from WP admin. Negative values are valid (cheaper methods).
+
+**Fixing methods:** `spigot_round`, `standoff_posts`, `viking`, `jh_clamps`, `side_channel`, `top_channel`, `aluminium_1`, `aluminium_2`, `sed`.
+
+**To change prices:** Edit only `config.ts`. Run `npm run build` and redeploy. Or use WP Admin → RG Calculator → Pricing (live, no rebuild).
 
 ### Hooks (`src/hooks/`)
 
 | File | Role |
 |---|---|
-| `usePricing.ts` | Fetches live pricing from `GET /wp-json/royal-glass/v1/pricing` on mount. Falls back to `DEFAULT_PRICING` if the fetch fails or on local dev. Also exports `getConfig()` which returns `window.rgCalculatorConfig`. |
+| `usePricing.ts` | Fetches live pricing from `GET /wp-json/royal-glass/v1/pricing` on mount. Falls back to `DEFAULT_PRICING` if the fetch fails or on local dev. Also exports `getConfig()` which returns `window.rgCalculatorConfig` (`restUrl`, `nonce`, `googleMapsKey`, `turnstileSiteKey`, `assetsUrl`). |
 
 ### UI components (`src/components/wizard/`)
 
@@ -109,7 +110,7 @@ All components use **inline `style` props only** — no Tailwind classNames, no 
 | `steps/shared.tsx` | `SelectionCard`, `SliderInput`, `StepNote`, `ComplianceWarning`, `StepHero` — shared primitives used by `CalculatorForm` |
 | `LeadCapture.tsx` | Contact form (name, email, phone, customer type, timeframe, address, notes, consent). Cloudflare Turnstile invisible CAPTCHA. |
 | `NZAddressAutocomplete.tsx` | Address autocomplete using Nominatim (OpenStreetMap). No API key required. Uses inline styles. |
-| `ResultScreen.tsx` | Estimate display, breakdown, project summary, assumptions, next steps, send-to-email card |
+| `ResultScreen.tsx` | Estimate display, breakdown, project summary, assumptions, next steps, "Share this estimate" forwarding card |
 
 `CalculatorForm.tsx` (in `src/components/`) owns the full step flow — all step content, canContinue logic, and navigation. It is not inside `wizard/`.
 
@@ -130,14 +131,15 @@ Never rely on `base` in `vite.config.ts` for image URLs — images are not impor
 | `rg-calculator.php` | Plugin bootstrap. Registers shortcode, enqueues assets, calls `wp_localize_script` to inject `window.rgCalculatorConfig` (`restUrl`, `nonce`, `googleMapsKey`, `turnstileSiteKey`, `assetsUrl`). |
 | `includes/database.php` | Creates `wp_rg_leads` table on activation. CRUD helpers. |
 | `includes/validation.php` | `rg_validate_lead`, `rg_validate_answers`, `rg_sanitize_*`. |
-| `includes/api.php` | REST routes. Lead submit handler: time gate → rate limit → honeypot → Turnstile → validate → save → async email → respond. Estimate email handler: rate limit → validate → async email → respond. **Known gap:** `/estimate-email` is missing Turnstile verification, honeypot check, time gate, and `rg_validate_answers()` call — see Security section. |
+| `includes/api.php` | REST routes. Lead submit handler: time gate → rate limit → honeypot → Turnstile → validate → save → async emails (admin + SM8 + customer) → respond. Estimate email handler: nonce → rate limit → validate → async email → respond. **Known gap:** `/estimate-email` is missing Turnstile verification and honeypot check — see Security section. |
 | `includes/email.php` | `rg_send_lead_email()` — plain-text admin notification. `rg_send_estimate_email_to_customer()` — rich HTML email to customer (price always shown, amber bar if concerns exist). |
-| `includes/admin-pricing.php` | WordPress admin page for editing pricing values. |
+| `includes/servicem8.php` | ServiceM8 inbox integration. `rg_sm8_send_immediate()` fires in the shutdown hook and sends a plain-text email to `RG_SM8_INBOX_EMAIL` for "Convert to Job" parsing. Quality scoring and cron retry logic retained but currently unused. |
+| `includes/admin-pricing.php` | WordPress admin page for editing pricing values (base rates, surcharges for glass, colour, fixing method, hardware finish, interlinking rails). |
 | `includes/admin-leads.php` | WordPress admin page listing submitted leads. |
 
-**Email sending is asynchronous.** Both the admin notification and the customer estimate email are dispatched via `add_action('shutdown', ...)` with `fastcgi_finish_request()`. The API responds to the browser immediately; emails send in the background after the response is flushed. This eliminates the 2-5 second `wp_mail()` delay the user would otherwise see.
+**All emails are asynchronous.** Admin notification, ServiceM8 inbox email, and customer estimate email are all dispatched together via `add_action('shutdown', ...)` with `fastcgi_finish_request()`. The API responds to the browser immediately; emails send in the background. This eliminates the 2-5 second `wp_mail()` delay the user would otherwise see.
 
-**Customer email is on-demand only.** No auto-confirmation is sent on form submit. The customer receives an email only when they explicitly click "Get this estimate in your inbox" on the result screen. This ensures the email always contains real pricing data (not stubs) and lets them redirect it to a builder, partner, or architect.
+**Customer estimate email is auto-sent on submit.** A copy is emailed to the customer's address (from the lead form) every time a lead is submitted. The customer can also forward the estimate to a different address via the "Share this estimate" panel on the result screen, which calls `/estimate-email`.
 
 **Turnstile enforcement** activates only when BOTH `RG_TURNSTILE_SITE_KEY` (frontend) AND `RG_TURNSTILE_SECRET` (backend) are defined in `wp-config.php`. A partial setup is treated as disabled.
 
@@ -157,7 +159,8 @@ Never rely on `base` in `vite.config.ts` for image URLs — images are not impor
 define('RG_GOOGLE_MAPS_KEY',   'AIza...');       // Retained in wp_localize_script output but unused — address autocomplete now uses Nominatim (no key required)
 define('RG_TURNSTILE_SITE_KEY','0x...');         // Cloudflare Turnstile site key (frontend widget)
 define('RG_TURNSTILE_SECRET',  '0x...');         // Cloudflare Turnstile secret (backend verification)
-define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz'); // Who receives new lead notifications
+define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz'); // Who receives admin lead notifications
+define('RG_SM8_INBOX_EMAIL',   'de9f86@inbox.servicem8.com'); // ServiceM8 inbox email (comma-separated list OK; leave undefined to disable)
 ```
 
 > Both Turnstile constants must be defined for enforcement to activate. Defining only one is treated as disabled.
@@ -171,13 +174,14 @@ define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz'); // Who receives new lea
 | # | Severity | File | Issue |
 |---|---|---|---|
 | 1 | ~~HIGH~~ FIXED | `includes/api.php` | `HTTP_CF_CONNECTING_IP` removed — site is on Bluehost (no Cloudflare proxy), so the header was attacker-controlled. `REMOTE_ADDR` is now the sole IP source. |
-| 2 | HIGH | `includes/api.php:179` | `/estimate-email` has no Turnstile, no honeypot, no time gate — rate limit only. Low practical risk on Bluehost but noted. |
+| 2 | ~~HIGH~~ PARTIAL | `includes/api.php` | `/estimate-email` now requires WordPress nonce (`wp_verify_nonce`). Still missing Turnstile, honeypot, and time gate — rate limit + nonce only. Low practical risk on Bluehost. |
 | 3 | ~~MED~~ FIXED | `includes/database.php` | `consent_given` and `consented_at` columns added. Stored in `rg_save_lead()` via `rg_sanitize_lead()`. Shown in admin lead detail view. Requires plugin reactivation on live site to apply DB migration. |
-| 4 | MED | `includes/api.php:102` | Client-supplied `estimate` values (low/high/subtotal) are stored and emailed without server-side recalculation |
-| 5 | ~~MED~~ FIXED | `includes/api.php` | `rg_validate_answers()` now called in `/estimate-email` handler before sending |
-| 6 | LOW | `includes/api.php:167` | Rate limit check/set is non-atomic — concurrent requests can exceed the limit by 1 |
-| 7 | ~~LOW~~ FIXED | `includes/email.php` | Email subject now uses `sanitize_text_field()` (was `esc_html()` — caused `&#039;` in subjects). HTML body uses `esc_html($name)` via `$name_html`. `$from_email` wrapped in `sanitize_email()`. |
-| 9 | INFO | `src/components/wizard/LeadCapture.tsx` | `marketingConsent` captured in state but never sent to the server or stored |
+| 4 | ~~MED~~ PARTIAL | `includes/validation.php` | Client-supplied `estimate` values are now bounds-clamped (`0–999,999 NZD`, `low ≤ high`) in `rg_sanitize_estimate()`. Still not recalculated server-side — inflated-but-valid values can be stored. |
+| 5 | ~~MED~~ FIXED | `includes/api.php` | `rg_validate_answers()` now called in `/estimate-email` handler before sending. |
+| 6 | LOW | `includes/api.php` | Rate limit check/set is non-atomic — concurrent requests can exceed the limit by 1. |
+| 7 | ~~LOW~~ FIXED | `includes/email.php` | Email subject uses `sanitize_text_field()`. HTML body uses `esc_html($name)` via `$name_html`. |
+| 8 | ~~LOW~~ FIXED | `includes/email.php` | `$from_email` inserted into headers without `sanitize_email()`. Now wrapped in `sanitize_email()`. |
+| 9 | INFO | `src/components/wizard/LeadCapture.tsx` | `marketingConsent` captured in state but never sent to the server or stored. |
 | 10 | ~~INFO~~ FIXED | `src/components/wizard/NZAddressAutocomplete.tsx` | Converted to inline styles. Tailwind removed entirely from the project (vite.config.ts, package.json, index.css). CSS bundle: 14.3 kB → 1.4 kB. |
 
 ### Security model
@@ -197,9 +201,8 @@ define('RG_LEAD_NOTIFY_EMAIL', 'roxy@royalglass.co.nz'); // Who receives new lea
 - `@tanstack/react-start`, `@cloudflare/vite-plugin`, or any Cloudflare Worker config
 - Supabase in the lead submission path
 - n8n or any external webhook called during public form submission
-- Automatic ServiceM8 job creation from a public form submission
+- Automatic ServiceM8 **job** creation from a public form submission (inbox email is fine; direct API call to SM8 is not)
 - Tailwind `className` props anywhere — Tailwind is fully removed from the project. Use inline `style` props.
-- An auto-confirmation email sent immediately on lead submit
 
 **Never expose to the browser bundle:**
 - ServiceM8 API keys, n8n webhook URLs, Supabase service-role keys, or any private credential

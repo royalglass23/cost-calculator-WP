@@ -31,11 +31,15 @@ const GLASS_COLOUR_LABELS: Record<string, string> = {
 };
 
 const FIXING_LABELS: Record<string, string> = {
-  spigots:        'Spigots',
-  standoff_posts: 'Stand-off posts',
-  hidden_channel: 'Hidden channel',
+  spigot_round:   'Spigot Round',
+  standoff_posts: 'Stand-off Posts',
   viking:         'Viking System',
-  not_sure:       'To be confirmed',
+  jh_clamps:      'JH Clamps',
+  side_channel:   'Side Channel',
+  top_channel:    'Top Channel',
+  aluminium_1:    'Aluminium 1',
+  aluminium_2:    'Aluminium 2',
+  sed:            'SED (Special Engineer Design)',
 };
 
 const SUBSTRATE_LABELS: Record<string, string> = {

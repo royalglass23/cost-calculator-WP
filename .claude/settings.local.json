@@ -13,7 +13,9 @@
       "Bash(ls src/components/calculator/)",
       "Bash(ls src/components/ui/)",
       "Bash(ls src/styles.css)",
-      "Bash(ls components.json)"
+      "Bash(ls components.json)",
+      "Bash(python *)",
+      "Bash(grep -E \"\\\\.\\(md|py|tsx|ts|php\\)$\")"
     ]
   },
   "enabledMcpjsonServers": [
