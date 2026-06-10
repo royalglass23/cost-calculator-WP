@@ -1,8 +1,8 @@
 # RG Cost Calculator — WordPress Plugin
 
-A React/Vite single-page app delivered as a WordPress plugin shortcode. Customers complete a 7-step wizard describing their frameless glass balustrade or pool fence project, submit their contact details, and receive an instant indicative price range.
+A React/Vite single-page app delivered as a WordPress plugin shortcode. Customers complete a 9-step wizard describing their frameless glass balustrade or pool fence project, submit their contact details, and receive an instant indicative price range.
 
-Current version: **2.1.1**
+Current version: **2.3.0**
 
 ---
 
@@ -10,13 +10,13 @@ Current version: **2.1.1**
 
 1. A WordPress page with `[rg_calculator]` shortcode loads the plugin
 2. Plugin enqueues `rg-calculator.js` + `rg-calculator.css` and injects REST config via `window.rgCalculatorConfig`
-3. React app mounts on `#rg-calculator-root` and runs the 7-step wizard client-side
-4. On step 7, pricing is fetched live from the WP admin (`GET /wp-json/royal-glass/v1/pricing`) and estimate is calculated in the browser
-5. Customer fills in contact details (step 9 — lead capture), including NZ address via Nominatim autocomplete
+3. React app mounts on `#rg-calculator-root` and runs the 9-step wizard client-side
+4. On the final step, pricing is fetched live from the WP admin (`GET /wp-json/royal-glass/v1/pricing`) and estimate is calculated in the browser
+5. Customer fills in contact details (lead capture), including NZ address via Nominatim autocomplete
 6. On submit, lead is posted to `POST /wp-json/royal-glass/v1/leads`
-7. WordPress saves to `wp_rg_leads`, schedules admin email asynchronously, returns `{ ok: true, leadId: N }`
+7. WordPress saves to `wp_rg_leads`, then sends three emails asynchronously via shutdown hook: admin notification, ServiceM8 inbox email, and customer estimate email
 8. Customer sees their price estimate with an optional amber bar listing items to confirm at site visit
-9. Customer can click "Get this estimate in your inbox" to receive the full HTML estimate email on demand
+9. Customer can forward the estimate to a builder, partner, or architect via the "Share this estimate" panel (calls `POST /wp-json/royal-glass/v1/estimate-email`)
 
 ---
 
@@ -72,10 +72,13 @@ Upload `dist/rg-calculator.js` and `dist/rg-calculator.css` to `wp-content/plugi
 ```php
 define('RG_TURNSTILE_SITE_KEY', '0x...');          // Cloudflare Turnstile site key (frontend)
 define('RG_TURNSTILE_SECRET',   '0x...');          // Cloudflare Turnstile secret (backend)
-define('RG_LEAD_NOTIFY_EMAIL',  'roxy@royalglass.co.nz'); // Who receives lead notifications
+define('RG_LEAD_NOTIFY_EMAIL',  'roxy@royalglass.co.nz'); // Who receives admin lead notifications
+define('RG_SM8_INBOX_EMAIL',    'inbox@servicem8.com');    // ServiceM8 inbox address (comma-separated list OK)
 ```
 
 > Both Turnstile constants must be defined for CAPTCHA enforcement to activate. Defining only one is treated as disabled.
+
+> `RG_SM8_INBOX_EMAIL` can be left undefined to disable ServiceM8 email entirely.
 
 > `RG_GOOGLE_MAPS_KEY` is still accepted but currently unused — address autocomplete was switched to Nominatim (OpenStreetMap), which requires no API key.
 
@@ -126,23 +129,30 @@ Each lead has a detail view showing full contact info, project details, and esti
 
 ## Email behaviour
 
-- **Admin notification** — plain text, sent automatically on every new lead
-- **Customer estimate email** — rich HTML, sent only when the customer explicitly clicks "Get this estimate in your inbox"; always contains the real price range; amber bar shown if any items need confirming at site visit
-- Both emails send asynchronously via `shutdown` hook — no user-facing delay
+Three emails fire asynchronously via the `shutdown` hook on every lead submit — no user-facing delay:
+
+| Email | Recipient | Format | When |
+|---|---|---|---|
+| Admin notification | `RG_LEAD_NOTIFY_EMAIL` | Plain text | Every lead |
+| ServiceM8 inbox | `RG_SM8_INBOX_EMAIL` | Plain text (SM8-parseable) | Every lead (if constant defined) |
+| Customer estimate | Customer's email | Rich HTML | Every lead (auto-sent) |
+
+- Customer estimate email always contains the real price range and an amber bar for any items needing site confirmation.
+- Customer can also forward the estimate to a different address (builder, partner, architect) via the "Share this estimate" panel on the result screen — this calls `/estimate-email` and requires a WordPress nonce.
+- `servicem8_status` column records `sent_to_inbox` or `failed` for each lead.
 
 ---
 
 ## Known security issues
 
-See `CLAUDE.md` → Security section for the full tracked issue list. The two highest priority items:
+See `CLAUDE.md` → Security section for the full tracked issue list. Remaining open items:
 
-1. `rg_get_client_ip()` trusts `HTTP_CF_CONNECTING_IP` without verifying `REMOTE_ADDR` is a Cloudflare IP — rate limits are bypassable if the origin server is hit directly
-2. `/estimate-email` lacks Turnstile and honeypot — could be used to send branded emails to arbitrary addresses if combined with the above
+1. `/estimate-email` has nonce verification but still lacks Turnstile CAPTCHA and honeypot check — a session-authenticated user could spam the endpoint within the 5/hour rate limit
+2. Client-supplied estimate values (low/high/subtotal) are bounds-clamped (0–999,999 NZD) but not recalculated server-side — a crafted request could store inflated-but-valid figures
 
 ---
 
 ## What is intentionally not in this version
 
-- ServiceM8 integration (deferred — post-approval workflow)
 - n8n automation (reserved for internal use)
-- Auto-confirmation email on form submit (removed — it sent stub $0/$0 data; customer email is on-demand only)
+- Server-side estimate recalculation (client-supplied values are clamped but not verified against the pricing engine)

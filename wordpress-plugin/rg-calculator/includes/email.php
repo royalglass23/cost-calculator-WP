@@ -98,11 +98,15 @@ function rg_send_estimate_email_to_customer(
         'frosted'  => 'Frosted',
     ];
     $fixing_map = [
-        'spigots'        => 'Spigots',
-        'standoff_posts' => 'Stand-off posts',
-        'hidden_channel' => 'Hidden channel',
+        'spigot_round'   => 'Spigot Round',
+        'standoff_posts' => 'Stand-off Posts',
         'viking'         => 'Viking System',
-        'not_sure'       => 'To be confirmed',
+        'jh_clamps'      => 'JH Clamps',
+        'side_channel'   => 'Side Channel',
+        'top_channel'    => 'Top Channel',
+        'aluminium_1'    => 'Aluminium 1',
+        'aluminium_2'    => 'Aluminium 2',
+        'sed'            => 'SED (Special Engineer Design)',
     ];
     $finish_map = [
         'standard_chrome' => 'Standard chrome',
