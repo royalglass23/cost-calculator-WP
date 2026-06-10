@@ -170,6 +170,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         phone: lead.phone,
         email: lead.email,
         customerType: lead.customerType ?? '',
+        timeframe: lead.timeframe ?? '',
         address: lead.address,
         callPreference: 'anytime',
         notes: lead.notes.trim(),

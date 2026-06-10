@@ -24,6 +24,13 @@ function rg_register_routes() {
         'callback'            => 'rg_handle_estimate_email',
         'permission_callback' => '__return_true',
     ]);
+
+    // GET /wp-json/royal-glass/v1/export-leads  (rgtools bridge - API-key secured)
+    register_rest_route('royal-glass/v1', '/export-leads', [
+        'methods'             => 'GET',
+        'callback'            => 'rg_handle_export_leads',
+        'permission_callback' => 'rg_export_leads_permission',
+    ]);
 }
 
 // ── GET /pricing ──────────────────────────────────────────────────────────────
@@ -231,4 +238,52 @@ function rg_verify_turnstile(string $token, string $ip): bool {
 
     $body = json_decode(wp_remote_retrieve_body($response), true);
     return !empty($body['success']);
+}
+
+// -- GET /export-leads (rgtools bridge) --------------------------------------
+
+function rg_export_leads_permission(WP_REST_Request $request): bool {
+    if (!defined('RG_EXPORT_API_KEY') || !RG_EXPORT_API_KEY) return false;
+    $provided = (string) ($request->get_header('X-RG-Export-Key') ?? '');
+    return $provided !== '' && hash_equals(RG_EXPORT_API_KEY, $provided);
+}
+
+function rg_handle_export_leads(WP_REST_Request $request): WP_REST_Response {
+    global $wpdb;
+    $since_id = max(0, (int) $request->get_param('since_id'));
+    $limit    = min(100, max(1, (int) ($request->get_param('limit') ?: 50)));
+
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}rg_leads WHERE id > %d ORDER BY id ASC LIMIT %d",
+        $since_id, $limit
+    ));
+
+    $leads = array_map(static function ($r) {
+        return [
+            'id'            => (int) $r->id,
+            'status'        => $r->status,
+            'first_name'    => $r->first_name,
+            'last_name'     => $r->last_name,
+            'phone'         => $r->phone,
+            'email'         => $r->email,
+            'customer_type' => $r->customer_type,
+            'timeframe'     => $r->timeframe ?? '',
+            'address'       => $r->address,
+            'call_pref'     => $r->call_pref,
+            'notes'         => $r->notes,
+            'project_type'  => $r->project_type,
+            'length_m'      => (int) $r->length_m,
+            'corners'       => (int) $r->corners,
+            'gates'         => (int) $r->gates,
+            'fixing_method' => $r->fixing_method,
+            'substrate'     => $r->substrate ?? '',
+            'hardware'      => $r->hardware,
+            'est_low'       => $r->est_low,
+            'est_high'      => $r->est_high,
+            'consent_given' => (int) $r->consent_given,
+            'created_at'    => $r->created_at,
+        ];
+    }, $rows ?: []);
+
+    return new WP_REST_Response(['ok' => true, 'leads' => $leads], 200);
 }

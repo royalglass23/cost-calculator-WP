@@ -43,12 +43,15 @@ function rg_sanitize_lead(array $lead): array {
     $consented     = !empty($lead['consent']);
     $allowed_types = ['homeowner', 'builder', 'developer', 'architect', 'pool_builder', 'other'];
     $raw_type      = sanitize_text_field($lead['customerType'] ?? '');
+    $allowed_timeframes = ['asap', '1_3_months', '3_6_months', '6_plus_months', 'just_planning'];
+    $raw_timeframe = sanitize_text_field($lead['timeframe'] ?? '');
     return [
         'firstName'      => sanitize_text_field($lead['firstName']   ?? ''),
         'lastName'       => sanitize_text_field($lead['lastName']    ?? ''),
         'phone'          => sanitize_text_field($lead['phone']       ?? ''),
         'email'          => sanitize_email($lead['email']            ?? ''),
         'customerType'   => in_array($raw_type, $allowed_types, true) ? $raw_type : '',
+        'timeframe'      => in_array($raw_timeframe, $allowed_timeframes, true) ? $raw_timeframe : '',
         'address'        => sanitize_text_field($lead['address']     ?? ''),
         'callPreference' => sanitize_text_field($lead['callPreference'] ?? 'anytime'),
         'notes'          => sanitize_textarea_field($lead['notes']   ?? ''),
