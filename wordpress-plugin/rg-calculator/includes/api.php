@@ -280,6 +280,10 @@ function rg_handle_export_leads(WP_REST_Request $request): WP_REST_Response {
             'hardware'      => $r->hardware,
             'est_low'       => $r->est_low,
             'est_high'      => $r->est_high,
+            'est_subtotal'  => $r->est_subtotal,
+            'needs_consult' => (int) $r->needs_consult,
+            'consult_notes' => $r->consult_notes,
+            'height'        => $r->height,
             'consent_given' => (int) $r->consent_given,
             'created_at'    => $r->created_at,
         ];
