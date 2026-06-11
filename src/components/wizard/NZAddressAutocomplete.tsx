@@ -1,11 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-}
+import { getConfig } from '../../hooks/usePricing';
 
 interface NZAddressAutocompleteProps {
   value: string;
@@ -13,14 +7,116 @@ interface NZAddressAutocompleteProps {
   error?: string;
 }
 
+interface PlacesPrediction {
+  place_id: string;
+  description: string;
+}
+
+interface PlacesAutocompleteService {
+  getPlacePredictions: (
+    request: {
+      input: string;
+      sessionToken?: PlacesSessionToken;
+      componentRestrictions?: { country: string };
+      types?: string[];
+    },
+    callback: (predictions: PlacesPrediction[] | null, status: string) => void
+  ) => void;
+}
+
+type PlacesSessionToken = {
+  readonly __placesSessionTokenBrand?: unique symbol;
+};
+
+interface PlacesLibrary {
+  AutocompleteService: new () => PlacesAutocompleteService;
+  AutocompleteSessionToken: new () => PlacesSessionToken;
+  PlacesServiceStatus: {
+    OK: string;
+    ZERO_RESULTS: string;
+  };
+}
+
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        places?: PlacesLibrary;
+      };
+    };
+  }
+}
+
+let googleMapsScriptPromise: Promise<void> | null = null;
+
+function loadGooglePlacesScript(apiKey: string): Promise<void> {
+  if (window.google?.maps?.places) return Promise.resolve();
+  if (googleMapsScriptPromise) return googleMapsScriptPromise;
+
+  googleMapsScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-rg-google-places="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Google Maps failed to load')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    const params = new URLSearchParams({
+      key: apiKey,
+      libraries: 'places',
+      v: 'weekly',
+    });
+
+    script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.rgGooglePlaces = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Google Maps failed to load'));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsScriptPromise;
+}
+
 export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutocompleteProps) {
-  const [query, setQuery]         = useState(value);
-  const [results, setResults]     = useState<NominatimResult[]>([]);
-  const [open, setOpen]           = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef              = useRef<HTMLDivElement>(null);
+  const [query, setQuery]             = useState(value);
+  const [results, setResults]         = useState<PlacesPrediction[]>([]);
+  const [open, setOpen]               = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [placesReady, setPlacesReady] = useState(false);
+  const [hoveredId, setHoveredId]     = useState<string | null>(null);
+  const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef                  = useRef<HTMLDivElement>(null);
+  const serviceRef                    = useRef<PlacesAutocompleteService | null>(null);
+  const sessionTokenRef               = useRef<PlacesSessionToken | null>(null);
+  const searchIdRef                   = useRef(0);
+
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  useEffect(() => {
+    const apiKey = getConfig().googleMapsKey?.trim();
+    if (!apiKey) return;
+
+    let cancelled = false;
+    loadGooglePlacesScript(apiKey)
+      .then(() => {
+        const places = window.google?.maps?.places;
+        if (!places || cancelled) return;
+        serviceRef.current = new places.AutocompleteService();
+        setPlacesReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setPlacesReady(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -32,59 +128,73 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const search = useCallback(async (q: string) => {
-    if (q.length < 3) { setResults([]); setOpen(false); return; }
-
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        q,
-        countrycodes:   'nz',
-        format:         'jsonv2',
-        addressdetails: '1',
-        limit:          '6',
-      });
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 7000);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
-        headers: { 'Accept-Language': 'en-NZ,en' },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (!res.ok) throw new Error('Search failed');
-      const data: NominatimResult[] = await res.json();
-
-      const cleaned = data.map((r) => ({
-        ...r,
-        display_name: r.display_name.replace(/, New Zealand$/, '').replace(/, Aotearoa$/, ''),
-      }));
-
-      setResults(cleaned);
-      setOpen(true);
-    } catch {
-      setResults([]);
-      setOpen(true);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
+
+  const search = useCallback((q: string) => {
+    const places = window.google?.maps?.places;
+    if (!placesReady || !serviceRef.current || !places || q.length < 3) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+
+    if (!sessionTokenRef.current) {
+      sessionTokenRef.current = new places.AutocompleteSessionToken();
+    }
+
+    const searchId = searchIdRef.current + 1;
+    searchIdRef.current = searchId;
+    setLoading(true);
+
+    serviceRef.current.getPlacePredictions(
+      {
+        input: q,
+        sessionToken: sessionTokenRef.current,
+        componentRestrictions: { country: 'nz' },
+        types: ['address'],
+      },
+      (predictions, status) => {
+        if (searchId !== searchIdRef.current) return;
+        setLoading(false);
+
+        if (status === places.PlacesServiceStatus.OK && predictions) {
+          setResults(predictions.slice(0, 6));
+          setOpen(true);
+          return;
+        }
+
+        setResults([]);
+        setOpen(status === places.PlacesServiceStatus.ZERO_RESULTS);
+      }
+    );
+  }, [placesReady]);
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const q = e.target.value;
     setQuery(q);
     onChange(q);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!placesReady) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+
     debounceRef.current = setTimeout(() => search(q), 350);
   }
 
-  function handleSelect(result: NominatimResult) {
-    setQuery(result.display_name);
-    onChange(result.display_name);
+  function handleSelect(result: PlacesPrediction) {
+    setQuery(result.description);
+    onChange(result.description);
     setResults([]);
     setOpen(false);
+    sessionTokenRef.current = null;
   }
+
+  const showSuggestions = open && placesReady;
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -97,8 +207,8 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
           onChange={handleInput}
           onFocus={() => results.length > 0 && setOpen(true)}
           aria-label="Project address"
-          aria-autocomplete="list"
-          aria-expanded={open}
+          aria-autocomplete={placesReady ? 'list' : 'none'}
+          aria-expanded={showSuggestions}
           style={{
             width: '100%',
             padding: '10px 36px 10px 12px',
@@ -125,7 +235,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
         )}
       </div>
 
-      {open && (
+      {showSuggestions && (
         <ul
           role="listbox"
           style={{
@@ -172,7 +282,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span style={{ color: '#374151', lineHeight: 1.4 }}>{r.display_name}</span>
+              <span style={{ color: '#374151', lineHeight: 1.4 }}>{r.description}</span>
             </li>
           ))}
           {!loading && results.length === 0 && (
@@ -185,7 +295,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
 
       {!error && (
         <p style={{ marginTop: '4px', fontSize: '12px', color: '#9ca3af' }}>
-          Start typing your NZ address — suggestions will appear
+          Start typing your NZ address{placesReady ? ' - suggestions will appear' : ''}
         </p>
       )}
       {error && <p style={{ marginTop: '4px', fontSize: '12px', color: '#dc2626' }}>{error}</p>}
