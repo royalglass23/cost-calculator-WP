@@ -12,29 +12,32 @@ interface PlacesPrediction {
   description: string;
 }
 
-interface PlacesAutocompleteService {
-  getPlacePredictions: (
-    request: {
-      input: string;
-      sessionToken?: PlacesSessionToken;
-      componentRestrictions?: { country: string };
-      types?: string[];
-    },
-    callback: (predictions: PlacesPrediction[] | null, status: string) => void
-  ) => void;
-}
-
 type PlacesSessionToken = {
   readonly __placesSessionTokenBrand?: unique symbol;
 };
 
-interface PlacesLibrary {
-  AutocompleteService: new () => PlacesAutocompleteService;
-  AutocompleteSessionToken: new () => PlacesSessionToken;
-  PlacesServiceStatus: {
-    OK: string;
-    ZERO_RESULTS: string;
+interface PlacePrediction {
+  placeId: string;
+  text: {
+    toString: () => string;
   };
+}
+
+interface AutocompleteSuggestion {
+  placePrediction?: PlacePrediction;
+}
+
+interface PlacesLibrary {
+  AutocompleteSuggestion: {
+    fetchAutocompleteSuggestions: (request: {
+      input: string;
+      sessionToken?: PlacesSessionToken;
+      includedRegionCodes?: string[];
+      language?: string;
+      region?: string;
+    }) => Promise<{ suggestions: AutocompleteSuggestion[] }>;
+  };
+  AutocompleteSessionToken: new () => PlacesSessionToken;
 }
 
 declare global {
@@ -42,6 +45,7 @@ declare global {
     google?: {
       maps?: {
         places?: PlacesLibrary;
+        importLibrary?: (library: 'places') => Promise<PlacesLibrary>;
       };
     };
   }
@@ -50,7 +54,7 @@ declare global {
 let googleMapsScriptPromise: Promise<void> | null = null;
 
 function loadGooglePlacesScript(apiKey: string): Promise<void> {
-  if (window.google?.maps?.places) return Promise.resolve();
+  if (window.google?.maps) return Promise.resolve();
   if (googleMapsScriptPromise) return googleMapsScriptPromise;
 
   googleMapsScriptPromise = new Promise((resolve, reject) => {
@@ -89,7 +93,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
   const [hoveredId, setHoveredId]     = useState<string | null>(null);
   const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef                  = useRef<HTMLDivElement>(null);
-  const serviceRef                    = useRef<PlacesAutocompleteService | null>(null);
+  const placesRef                     = useRef<PlacesLibrary | null>(null);
   const sessionTokenRef               = useRef<PlacesSessionToken | null>(null);
   const searchIdRef                   = useRef(0);
 
@@ -103,10 +107,12 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
 
     let cancelled = false;
     loadGooglePlacesScript(apiKey)
-      .then(() => {
-        const places = window.google?.maps?.places;
+      .then(async () => {
+        const places = window.google?.maps?.importLibrary
+          ? await window.google.maps.importLibrary('places')
+          : window.google?.maps?.places;
         if (!places || cancelled) return;
-        serviceRef.current = new places.AutocompleteService();
+        placesRef.current = places;
         setPlacesReady(true);
       })
       .catch(() => {
@@ -132,9 +138,9 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
 
-  const search = useCallback((q: string) => {
-    const places = window.google?.maps?.places;
-    if (!placesReady || !serviceRef.current || !places || q.length < 3) {
+  const search = useCallback(async (q: string) => {
+    const places = placesRef.current;
+    if (!placesReady || !places || q.length < 3) {
       setResults([]);
       setOpen(false);
       return;
@@ -148,27 +154,44 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
     searchIdRef.current = searchId;
     setLoading(true);
 
-    serviceRef.current.getPlacePredictions(
-      {
-        input: q,
-        sessionToken: sessionTokenRef.current,
-        componentRestrictions: { country: 'nz' },
-        types: ['address'],
-      },
-      (predictions, status) => {
-        if (searchId !== searchIdRef.current) return;
-        setLoading(false);
+    try {
+      const response = await Promise.race([
+        places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: q,
+          sessionToken: sessionTokenRef.current,
+          includedRegionCodes: ['nz'],
+          language: 'en-NZ',
+          region: 'nz',
+        }),
+        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 7000)),
+      ]);
 
-        if (status === places.PlacesServiceStatus.OK && predictions) {
-          setResults(predictions.slice(0, 6));
-          setOpen(true);
-          return;
-        }
+      if (searchId !== searchIdRef.current) return;
+      setLoading(false);
 
+      if (!response) {
         setResults([]);
-        setOpen(status === places.PlacesServiceStatus.ZERO_RESULTS);
+        setOpen(true);
+        return;
       }
-    );
+
+      const predictions = response.suggestions
+        .map((suggestion) => suggestion.placePrediction)
+        .filter((prediction): prediction is PlacePrediction => Boolean(prediction))
+        .map((prediction) => ({
+          place_id: prediction.placeId,
+          description: prediction.text.toString(),
+        }))
+        .slice(0, 6);
+
+      setResults(predictions);
+      setOpen(true);
+    } catch {
+      if (searchId !== searchIdRef.current) return;
+      setLoading(false);
+      setResults([]);
+      setOpen(true);
+    }
   }, [placesReady]);
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
