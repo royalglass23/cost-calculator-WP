@@ -52,7 +52,7 @@ export default function App() {
 
   const [answers, setAnswers] = useState<WizardAnswers>(INITIAL_ANSWERS);
   const [showLeadCapture, setShowLeadCapture] = useState(false);
-  const [leadInfo, setLeadInfo] = useState<{ leadId: number; email: string; firstName: string } | null>(null);
+  const [leadInfo, setLeadInfo] = useState<{ leadId: string; email: string; firstName: string } | null>(null);
 
   useEffect(() => {
     const config = getConfig();
@@ -68,7 +68,7 @@ export default function App() {
     setAnswers((prev) => ({ ...prev, ...updates }));
   }
 
-  function handleLeadSuccess(leadId: number, email: string, firstName: string) {
+  function handleLeadSuccess(leadId: string, email: string, firstName: string) {
     setLeadInfo({ leadId, email, firstName });
   }
 

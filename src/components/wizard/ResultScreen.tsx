@@ -6,7 +6,7 @@ import { getConfig } from '../../hooks/usePricing';
 interface Props {
   answers: WizardAnswers;
   estimate: EstimateResult;
-  leadId: number;
+  leadId: string;
   email: string;
   firstName: string;
 }

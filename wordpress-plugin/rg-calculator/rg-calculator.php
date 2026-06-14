@@ -96,6 +96,9 @@ function rg_calc_enqueue_assets() {
         'googleMapsKey'    => defined('RG_GOOGLE_MAPS_KEY')    ? RG_GOOGLE_MAPS_KEY    : '',
         'turnstileSiteKey' => defined('RG_TURNSTILE_SITE_KEY') ? RG_TURNSTILE_SITE_KEY : '',
         'assetsUrl'        => RG_CALC_URL . 'assets/',
+        // rgtools is the lead front door: the calculator POSTs submissions here
+        // (not to the WP /leads endpoint). Define RG_RGTOOLS_SUBMIT_URL in wp-config.
+        'rgtoolsSubmitUrl' => defined('RG_RGTOOLS_SUBMIT_URL') ? RG_RGTOOLS_SUBMIT_URL : '',
     ]);
 }
 
