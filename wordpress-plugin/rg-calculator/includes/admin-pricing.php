@@ -26,8 +26,10 @@ function rg_admin_pricing_menu(): void {
 function rg_admin_pricing_page(): void {
     if (!current_user_can('manage_options')) return;
 
+    $pricing_managed_in_rgtools = defined('RG_TOOLS_PRICING_URL') && RG_TOOLS_PRICING_URL;
+
     // Save
-    if (isset($_POST['rg_pricing_nonce']) && wp_verify_nonce($_POST['rg_pricing_nonce'], 'rg_save_pricing')) {
+    if (!$pricing_managed_in_rgtools && isset($_POST['rg_pricing_nonce']) && wp_verify_nonce($_POST['rg_pricing_nonce'], 'rg_save_pricing')) {
         $saved = [
             'scenarios' => [
                 'ground_level'       => [
@@ -121,10 +123,17 @@ function rg_admin_pricing_page(): void {
     ?>
     <div class="wrap">
         <h1>RG Calculator — Pricing Settings</h1>
-        <p style="color:#666">Changes here take effect immediately — no rebuild required. All prices are in NZD, excluding GST.</p>
+        <?php if ($pricing_managed_in_rgtools): ?>
+            <div class="notice notice-info">
+                <p><strong>Pricing is managed in RG Tools.</strong> This WordPress page is read-only while RG_TOOLS_PRICING_URL is defined.</p>
+            </div>
+        <?php else: ?>
+            <p style="color:#666">Changes here take effect immediately — no rebuild required. All prices are in NZD, excluding GST.</p>
+        <?php endif; ?>
 
         <form method="post" action="">
             <?php wp_nonce_field('rg_save_pricing', 'rg_pricing_nonce'); ?>
+            <fieldset <?= $pricing_managed_in_rgtools ? 'disabled' : '' ?>>
 
             <h2>Base Rates &amp; Gate Prices</h2>
             <table class="form-table" style="max-width:700px">
@@ -334,7 +343,8 @@ High estimate        = subtotal × rangeHighPercent / 100
                 Ground Level ≤1m · Balcony/Patio 1m (NZBC) · Pool Fence 1.2m (NZ Pool Safety Act) · Stair 1m (NZBC)</p>
             </div>
 
-            <?php submit_button('Save pricing', 'primary', 'submit', true, ['style' => 'margin-top:1.5rem']); ?>
+            <?php submit_button($pricing_managed_in_rgtools ? 'Managed in RG Tools' : 'Save pricing', 'primary', 'submit', true, ['style' => 'margin-top:1.5rem']); ?>
+            </fieldset>
         </form>
     </div>
     <?php

@@ -36,7 +36,22 @@ function rg_register_routes() {
 // ── GET /pricing ──────────────────────────────────────────────────────────────
 
 function rg_get_pricing(): WP_REST_Response {
-    $defaults = [
+    $defaults = rg_pricing_defaults();
+
+    if (defined('RG_TOOLS_PRICING_URL') && RG_TOOLS_PRICING_URL) {
+        return new WP_REST_Response(rg_get_rgtools_pricing_with_fallback($defaults), 200);
+    }
+
+    $saved = get_option('rg_calculator_pricing', []);
+    $pricing = (!empty($saved['scenarios']) && !empty($saved['hardwareFinishSurcharge']))
+        ? array_replace_recursive($defaults, $saved)
+        : $defaults;
+
+    return new WP_REST_Response($pricing, 200);
+}
+
+function rg_pricing_defaults(): array {
+    return [
         'scenarios' => [
             'ground_level'       => ['ratePerMetre' => 280, 'gatePrice' => null],
             'balcony_balustrade' => ['ratePerMetre' => 320, 'gatePrice' => null],
@@ -48,17 +63,47 @@ function rg_get_pricing(): WP_REST_Response {
         'hardwareFinishSurcharge'  => ['standard_chrome' => 0, 'matte_black' => 15, 'brushed_chrome' => 12, 'powder_coated' => 22, 'not_sure' => 0],
         'glassTypeSurcharge'       => ['toughened_12mm' => 0, 'laminated' => 0],
         'glassColourSurcharge'     => ['clear' => 0, 'tinted' => 0, 'frosted' => 0, 'low_iron' => 0],
+        'fixingMethodSurcharge'    => ['spigot_round' => 0, 'standoff_posts' => 0, 'viking' => 0, 'side_channel' => 0, 'top_channel' => 0, 'aluminium_1' => 0, 'aluminium_2' => 0, 'jh_clamps' => 0, 'sed' => 0, 'not_sure' => 0],
         'interlikingRailsSurcharge' => 0,
         'rangeLowPercent'          => 90,
         'rangeHighPercent'         => 120,
     ];
+}
 
-    $saved = get_option('rg_calculator_pricing', []);
-    $pricing = (!empty($saved['scenarios']) && !empty($saved['hardwareFinishSurcharge']))
-        ? array_replace_recursive($defaults, $saved)
-        : $defaults;
+function rg_get_rgtools_pricing_with_fallback(array $defaults): array {
+    $cached = get_transient('rg_pricing_cache');
+    if (is_array($cached) && rg_is_valid_pricing_payload($cached)) {
+        return $cached;
+    }
 
-    return new WP_REST_Response($pricing, 200);
+    $response = wp_remote_get((string) RG_TOOLS_PRICING_URL, [
+        'timeout' => 5,
+    ]);
+
+    if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (is_array($body) && rg_is_valid_pricing_payload($body)) {
+            $pricing = array_replace_recursive($defaults, $body);
+            set_transient('rg_pricing_cache', $pricing, 10 * MINUTE_IN_SECONDS);
+            update_option('rg_pricing_last_known', $pricing, false);
+            return $pricing;
+        }
+    }
+
+    $last_known = get_option('rg_pricing_last_known', []);
+    if (is_array($last_known) && rg_is_valid_pricing_payload($last_known)) {
+        return array_replace_recursive($defaults, $last_known);
+    }
+
+    return $defaults;
+}
+
+function rg_is_valid_pricing_payload($pricing): bool {
+    return is_array($pricing)
+        && !empty($pricing['scenarios'])
+        && is_array($pricing['scenarios'])
+        && !empty($pricing['hardwareFinishSurcharge'])
+        && is_array($pricing['hardwareFinishSurcharge']);
 }
 
 // ── POST /leads ───────────────────────────────────────────────────────────────
