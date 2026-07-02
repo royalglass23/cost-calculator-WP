@@ -7,6 +7,23 @@ const s = (base: React.CSSProperties): React.CSSProperties => base;
 
 const NZ_PHONE = /^(\+?64[\s-]?)?(\(?0?[2-9]\d?\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4})$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TURNSTILE_TIMEOUT_MS = 15000;
+const TURNSTILE_MAX_ATTEMPTS = 3;
+
+function getLeadSubmitTarget(config: ReturnType<typeof getConfig>) {
+  const rgtoolsSubmitUrl = config.rgtoolsSubmitUrl?.trim();
+  if (rgtoolsSubmitUrl) {
+    return {
+      url: rgtoolsSubmitUrl,
+      headers: { 'Content-Type': 'application/json' },
+    };
+  }
+
+  return {
+    url: `${config.restUrl}/leads`,
+    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+  };
+}
 
 declare global {
   interface Window {
@@ -60,7 +77,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
   const turnstileRef = useRef<HTMLDivElement>(null);
   const turnstileWidgetId = useRef<string | null>(null);
   const turnstileToken = useRef('');
-  const tokenWaiters = useRef<Array<(token: string) => void>>([]);
+  const tokenWaiters = useRef<Array<{ resolve: (token: string) => void; reject: (error: Error) => void }>>([]);
   const honeypotRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -76,10 +93,20 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         sitekey: config.turnstileSiteKey,
         callback: (t: string) => {
           turnstileToken.current = t;
-          tokenWaiters.current.forEach((resolve) => resolve(t));
+          tokenWaiters.current.forEach(({ resolve }) => resolve(t));
           tokenWaiters.current = [];
         },
         'expired-callback': () => { turnstileToken.current = ''; },
+        'error-callback': () => {
+          turnstileToken.current = '';
+          tokenWaiters.current.forEach(({ reject }) => reject(new Error('turnstile-error')));
+          tokenWaiters.current = [];
+        },
+        'timeout-callback': () => {
+          turnstileToken.current = '';
+          tokenWaiters.current.forEach(({ reject }) => reject(new Error('turnstile-timeout')));
+          tokenWaiters.current = [];
+        },
         size: 'invisible',
         appearance: 'interaction-only',
       });
@@ -134,23 +161,39 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
       return false;
     }
 
-    const tokenPromise = new Promise<string>((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error('timeout')), 8000);
-      tokenWaiters.current.push((token) => {
-        window.clearTimeout(timeout);
-        resolve(token);
-      });
-    });
+    for (let attempt = 1; attempt <= TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
+      tokenWaiters.current = [];
+      turnstileToken.current = '';
 
-    try {
-      window.turnstile.reset(turnstileWidgetId.current);
-      window.turnstile.execute(turnstileWidgetId.current);
-      await tokenPromise;
-      return !!turnstileToken.current;
-    } catch {
-      setServerError('Security check failed to load. Please reload the page and try again.');
-      return false;
+      const tokenPromise = new Promise<string>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('turnstile-timeout')), TURNSTILE_TIMEOUT_MS);
+        tokenWaiters.current.push({
+          resolve: (token) => {
+            window.clearTimeout(timeout);
+            resolve(token);
+          },
+          reject: (error) => {
+            window.clearTimeout(timeout);
+            reject(error);
+          },
+        });
+      });
+
+      try {
+        window.turnstile.reset(turnstileWidgetId.current);
+        window.turnstile.execute(turnstileWidgetId.current);
+        await tokenPromise;
+        if (turnstileToken.current) return true;
+      } catch {
+        if (attempt < TURNSTILE_MAX_ATTEMPTS) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
+          continue;
+        }
+      }
     }
+
+    setServerError('Security check took too long. Please tap Show my estimate again, or call 0800 769 254.');
+    return false;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -177,13 +220,14 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         consent: lead.consent,
         websiteUrl: honeypotRef.current?.value ?? '',
       };
-      const res = await fetch(`${config.restUrl}/leads`, {
+      const submitTarget = getLeadSubmitTarget(config);
+      const res = await fetch(submitTarget.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+        headers: submitTarget.headers,
         body: JSON.stringify({ answers, lead: payloadLead, estimate, turnstileToken: turnstileToken.current, loadedAt }),
       });
-      const data = await res.json();
-      if (data.ok) onSuccess(data.leadId ?? 0, lead.email, firstName ?? '');
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) onSuccess(data.leadId ?? data.id ?? 0, lead.email, firstName ?? '');
       else setServerError(data.error ?? 'Something went wrong. Please try again.');
     } catch {
       setServerError('Unable to submit. Please check your connection or call 0800 769 254.');
