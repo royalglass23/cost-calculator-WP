@@ -4,11 +4,11 @@ import { DEFAULT_PRICING } from '../lib/calculator/config';
 
 declare const rgCalculatorConfig: {
   restUrl: string;
+  rgtoolsSubmitUrl: string;
   nonce: string;
   googleMapsKey: string;
   turnstileSiteKey: string;
   assetsUrl: string;
-  rgtoolsSubmitUrl: string;
 };
 
 export function usePricing(): { pricing: PricingConfig; loading: boolean } {
@@ -44,10 +44,10 @@ export function getConfig() {
   if (typeof rgCalculatorConfig !== 'undefined') return rgCalculatorConfig;
   return {
     restUrl: '/wp-json/royal-glass/v1',
+    rgtoolsSubmitUrl: '',
     nonce: '',
     googleMapsKey: '',
     turnstileSiteKey: '',
     assetsUrl: '',
-    rgtoolsSubmitUrl: '',
   };
 }
