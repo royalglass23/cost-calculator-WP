@@ -57,7 +57,7 @@ interface Props {
   answers: WizardAnswers;
   estimate: EstimateResult;
   loadedAt: number;
-  onSuccess: (leadId: number, email: string, firstName: string) => void;
+  onSuccess: (leadId: string, email: string, firstName: string) => void;
   onBack: () => void;
 }
 
@@ -227,7 +227,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         body: JSON.stringify({ answers, lead: payloadLead, estimate, turnstileToken: turnstileToken.current, loadedAt }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok !== false) onSuccess(data.leadId ?? data.id ?? 0, lead.email, firstName ?? '');
+      if (res.ok && data.ok !== false) onSuccess(data.leadId ?? data.id ?? '', lead.email, firstName ?? '');
       else setServerError(data.error ?? 'Something went wrong. Please try again.');
     } catch {
       setServerError('Unable to submit. Please check your connection or call 0800 769 254.');

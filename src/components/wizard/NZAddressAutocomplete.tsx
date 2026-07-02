@@ -90,6 +90,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
   const [open, setOpen]               = useState(false);
   const [loading, setLoading]         = useState(false);
   const [placesReady, setPlacesReady] = useState(false);
+  const [lookupFailed, setLookupFailed] = useState(false);
   const [hoveredId, setHoveredId]     = useState<string | null>(null);
   const debounceRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef                  = useRef<HTMLDivElement>(null);
@@ -153,6 +154,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
     const searchId = searchIdRef.current + 1;
     searchIdRef.current = searchId;
     setLoading(true);
+    setLookupFailed(false);
 
     try {
       const response = await Promise.race([
@@ -171,6 +173,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
 
       if (!response) {
         setResults([]);
+        setLookupFailed(true);
         setOpen(true);
         return;
       }
@@ -190,6 +193,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
       if (searchId !== searchIdRef.current) return;
       setLoading(false);
       setResults([]);
+      setLookupFailed(true);
       setOpen(true);
     }
   }, [placesReady]);
@@ -198,6 +202,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
     const q = e.target.value;
     setQuery(q);
     onChange(q);
+    setLookupFailed(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (!placesReady) {
@@ -310,9 +315,25 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
           ))}
           {!loading && results.length === 0 && (
             <li style={{ padding: '10px 12px', fontSize: '14px', color: '#6b7280' }}>
-              No NZ address suggestions found. Keep typing a fuller address.
+              {lookupFailed
+                ? 'Google address suggestions are unavailable. You can still type the address manually.'
+                : 'No NZ address suggestions found. Keep typing a fuller address.'}
             </li>
           )}
+          <li
+            aria-hidden="true"
+            style={{
+              borderTop: '1px solid #f3f4f6',
+              padding: '7px 12px',
+              textAlign: 'right',
+              fontSize: '11px',
+              color: '#9ca3af',
+              background: '#f9fafb',
+              letterSpacing: '0.01em',
+            }}
+          >
+            Powered by Google
+          </li>
         </ul>
       )}
 

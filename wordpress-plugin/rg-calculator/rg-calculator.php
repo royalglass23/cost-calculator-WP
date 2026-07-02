@@ -95,7 +95,9 @@ function rg_calc_enqueue_assets() {
         'restUrl'          => esc_url_raw(rest_url('royal-glass/v1')),
         'rgtoolsSubmitUrl' => defined('RGTOOLS_SUBMIT_URL') && RGTOOLS_SUBMIT_URL
             ? esc_url_raw(RGTOOLS_SUBMIT_URL)
-            : 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit',
+            : (defined('RG_RGTOOLS_SUBMIT_URL') && RG_RGTOOLS_SUBMIT_URL
+                ? esc_url_raw(RG_RGTOOLS_SUBMIT_URL)
+                : 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit'),
         'nonce'            => wp_create_nonce('wp_rest'),
         'googleMapsKey'    => defined('RG_GOOGLE_MAPS_KEY')    ? RG_GOOGLE_MAPS_KEY    : '',
         'turnstileSiteKey' => defined('RG_TURNSTILE_SITE_KEY') ? RG_TURNSTILE_SITE_KEY : '',
