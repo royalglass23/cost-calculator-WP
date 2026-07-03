@@ -26,7 +26,7 @@ function rg_admin_pricing_menu(): void {
 function rg_admin_pricing_page(): void {
     if (!current_user_can('manage_options')) return;
 
-    $pricing_managed_in_rgtools = defined('RG_TOOLS_PRICING_URL') && RG_TOOLS_PRICING_URL;
+    $pricing_managed_in_rgtools = (bool) rg_get_rgtools_pricing_url();
 
     // Save
     if (!$pricing_managed_in_rgtools && isset($_POST['rg_pricing_nonce']) && wp_verify_nonce($_POST['rg_pricing_nonce'], 'rg_save_pricing')) {
@@ -125,7 +125,7 @@ function rg_admin_pricing_page(): void {
         <h1>RG Calculator — Pricing Settings</h1>
         <?php if ($pricing_managed_in_rgtools): ?>
             <div class="notice notice-info">
-                <p><strong>Pricing is managed in RG Tools.</strong> This WordPress page is read-only while RG_TOOLS_PRICING_URL is defined.</p>
+                <p><strong>Pricing is managed in RG Tools.</strong> This WordPress page is read-only while the rgtools target is configured in Calculator Settings.</p>
             </div>
         <?php else: ?>
             <p style="color:#666">Changes here take effect immediately — no rebuild required. All prices are in NZD, excluding GST.</p>

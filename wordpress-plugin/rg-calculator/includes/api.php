@@ -38,7 +38,7 @@ function rg_register_routes() {
 function rg_get_pricing(): WP_REST_Response {
     $defaults = rg_pricing_defaults();
 
-    if (defined('RG_TOOLS_PRICING_URL') && RG_TOOLS_PRICING_URL) {
+    if (rg_get_rgtools_pricing_url()) {
         return new WP_REST_Response(rg_get_rgtools_pricing_with_fallback($defaults), 200);
     }
 
@@ -76,7 +76,7 @@ function rg_get_rgtools_pricing_with_fallback(array $defaults): array {
         return $cached;
     }
 
-    $response = wp_remote_get((string) RG_TOOLS_PRICING_URL, [
+    $response = wp_remote_get(rg_get_rgtools_pricing_url(), [
         'timeout' => 5,
     ]);
 
@@ -224,18 +224,6 @@ function rg_check_rate_limit(string $ip): bool {
 
     set_transient($key, $count + 1, $window);
     return true;
-}
-
-function rg_get_rgtools_submit_url(): string {
-    if (defined('RGTOOLS_SUBMIT_URL') && RGTOOLS_SUBMIT_URL) {
-        return esc_url_raw(RGTOOLS_SUBMIT_URL);
-    }
-
-    if (defined('RG_RGTOOLS_SUBMIT_URL') && RG_RGTOOLS_SUBMIT_URL) {
-        return esc_url_raw(RG_RGTOOLS_SUBMIT_URL);
-    }
-
-    return 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit';
 }
 
 function rg_normalize_submission_ref($value): string {

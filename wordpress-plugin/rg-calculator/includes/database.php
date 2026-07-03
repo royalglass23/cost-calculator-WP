@@ -1,7 +1,7 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-define('RG_DB_VERSION', '2.5.0');
+define('RG_DB_VERSION', '2.6.0');
 define('RG_CALCULATOR_OUTBOX_MAX_ATTEMPTS', 5);
 
 function rg_create_leads_table(): void {
@@ -108,6 +108,16 @@ function rg_create_outbox_table(): void {
     }
 }
 
+function rg_ensure_outbox_table(): void {
+    static $ensured = false;
+    if ($ensured) {
+        return;
+    }
+
+    rg_create_outbox_table();
+    $ensured = true;
+}
+
 // Run schema migrations automatically when any admin page loads and the DB version is stale.
 add_action('admin_init', 'rg_maybe_migrate_db');
 function rg_maybe_migrate_db(): void {
@@ -190,6 +200,8 @@ function rg_update_lead_status(int $id, string $status): void {
 
 function rg_save_failed_forward_outbox(string $submission_ref, array $payload, string $error): void {
     global $wpdb;
+    rg_ensure_outbox_table();
+
     $table = $wpdb->prefix . 'rg_calculator_outbox';
     $now = current_time('mysql', true);
     $next_retry_at = gmdate('Y-m-d H:i:s', time() + 5 * MINUTE_IN_SECONDS);
@@ -238,6 +250,8 @@ function rg_save_failed_forward_outbox(string $submission_ref, array $payload, s
 
 function rg_get_due_forward_outbox_entries(int $limit = 10): array {
     global $wpdb;
+    rg_ensure_outbox_table();
+
     $table = $wpdb->prefix . 'rg_calculator_outbox';
     $now = current_time('mysql', true);
 
@@ -329,6 +343,8 @@ function rg_retry_failed_forward_outbox_batch(int $limit = 10): void {
 
 function rg_get_forward_outbox_entry(int $id): ?object {
     global $wpdb;
+    rg_ensure_outbox_table();
+
     $table = $wpdb->prefix . 'rg_calculator_outbox';
     $entry = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$table} WHERE id = %d LIMIT 1",
@@ -367,7 +383,8 @@ function rg_log_calculator_outbox_event(string $event, string $submission_ref, i
 }
 
 function rg_notify_calculator_outbox_attention(object $entry, string $error): void {
-    if (!defined('RG_LEAD_NOTIFY_EMAIL') || !RG_LEAD_NOTIFY_EMAIL) {
+    $notify_email = rg_get_lead_notify_email();
+    if (!$notify_email) {
         return;
     }
 
@@ -385,5 +402,5 @@ function rg_notify_calculator_outbox_attention(object $entry, string $error): vo
         'Use rgtools as the lead workspace once recovery succeeds.',
     ]);
 
-    wp_mail((string) RG_LEAD_NOTIFY_EMAIL, $subject, $body);
+    wp_mail($notify_email, $subject, $body);
 }
