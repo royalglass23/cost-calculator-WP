@@ -14,6 +14,7 @@
  *   define('RG_TURNSTILE_SITE_KEY','0x...');         // Cloudflare Turnstile site key
  *   define('RG_TURNSTILE_SECRET',  '0x...');         // Cloudflare Turnstile secret key
  *   define('RGTOOLS_SUBMIT_URL',   'https://www.rgtools.co.nz/api/lead-intake/calculator-submit');
+ *   define('RGTOOLS_SUBMIT_SECRET','same-secret-as-rgtools-vercel-env');
  *   define('RG_LEAD_NOTIFY_EMAIL', 'info@royalglass.co.nz'); // who gets new lead notifications
  *   define('RG_SM8_INBOX_EMAIL',   'de9f86@inbox.servicem8.com'); // ServiceM8 inbox (comma-separate to add test address)
  */
