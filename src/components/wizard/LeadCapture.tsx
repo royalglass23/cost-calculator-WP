@@ -10,6 +10,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TURNSTILE_TIMEOUT_MS = 15000;
 const TURNSTILE_MAX_ATTEMPTS = 3;
 
+function createSubmissionRef(): string {
+  const timestamp = Date.now().toString(36);
+  const random =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+      : Math.random().toString(36).slice(2, 14);
+
+  return `rgcalc_${timestamp}_${random.toLowerCase()}`;
+}
+
 function getLeadSubmitTarget(config: ReturnType<typeof getConfig>) {
   return {
     url: `${config.restUrl}/leads`,
@@ -82,6 +92,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
   const turnstileToken = useRef('');
   const tokenWaiters = useRef<Array<{ resolve: (token: string) => void; reject: (error: Error) => void }>>([]);
   const honeypotRef = useRef<HTMLInputElement>(null);
+  const submissionRef = useRef(createSubmissionRef());
 
   React.useEffect(() => {
     if (!turnstileRef.current) return;
@@ -223,7 +234,14 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         consent: lead.consent,
         websiteUrl: honeypotRef.current?.value ?? '',
       };
-      const body = JSON.stringify({ answers, lead: payloadLead, estimate, turnstileToken: turnstileToken.current, loadedAt });
+      const body = JSON.stringify({
+        submissionRef: submissionRef.current,
+        answers,
+        lead: payloadLead,
+        estimate,
+        turnstileToken: turnstileToken.current,
+        loadedAt,
+      });
       const submitTarget = getLeadSubmitTarget(config);
       const res = await postLead(submitTarget, body);
       const data = await res.json().catch(() => ({}));
