@@ -1,0 +1,49 @@
+{
+  "answers": {
+    "scenario": "premium_pool_fence",
+    "length": 10,
+    "landingLength": 0,
+    "corners": 0,
+    "gates": 1,
+    "glassType": "toughened_12mm",
+    "glassColour": "clear",
+    "interlikingRails": false,
+    "fixingMethod": "spigot_round",
+    "substrate": "concrete",
+    "hardwareFinish": "standard_chrome",
+    "callTriggers": []
+  },
+  "lead": {
+    "firstName": "Codex",
+    "lastName": "TEST ONLY Lead",
+    "phone": "021 123 4567",
+    "email": "royalglass666@gmail.com",
+    "customerType": "homeowner",
+    "timeframe": "just_planning",
+    "address": "123 TEST ONLY Street, Auckland 1010",
+    "callPreference": "anytime",
+    "notes": "TEST ONLY - API lead capture submission by Codex on 2026-07-03 NZT. Please ignore/delete.",
+    "consent": true,
+    "websiteUrl": ""
+  },
+  "estimate": {
+    "effectiveLength": 10,
+    "subtotal": 4480,
+    "low": 4050,
+    "high": 5400,
+    "needsCallUs": false,
+    "consultationFlags": [],
+    "breakdown": {
+      "base": 3800,
+      "gates": 680,
+      "corners": 0,
+      "hardwareSurcharge": 0,
+      "fixingMethodSurcharge": 0,
+      "glassTypeSurcharge": 0,
+      "glassColourSurcharge": 0,
+      "interlikingRails": 0
+    }
+  },
+  "turnstileToken": "",
+  "loadedAt": 0
+}
