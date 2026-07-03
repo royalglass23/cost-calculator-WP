@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/estimate`, fill in a 9-step wizard describing their frameless glass balustrade or pool fence project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), sends three emails asynchronously (admin notification, ServiceM8 inbox, customer estimate), and returns a success response.
+A **React/Vite SPA** delivered as a **WordPress plugin shortcode** (`[rg_calculator]`). Customers visit `royalglass.co.nz/cost-calculator/`, fill in a 9-step wizard describing their frameless glass balustrade or pool fence project, receive a client-side price estimate, and submit their lead. The WordPress plugin saves the lead to a custom DB table (`wp_rg_leads`), sends three emails asynchronously (admin notification, ServiceM8 inbox, customer estimate), and returns a success response.
 
 There is no Node.js server, no Cloudflare Workers, and no Supabase in the production path.
 

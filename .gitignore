@@ -35,6 +35,9 @@ dist-ssr
 .env.local
 .env.*.local
 
-.claude
+.claude/
 .claude-flow/
 .mcp.json
+.playwright-mcp/
+.agents/
+.codex/

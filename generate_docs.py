@@ -278,7 +278,7 @@ def build_doc():
 
     doc.add_paragraph()
     h2(doc, 'What happens when someone uses it')
-    numbered(doc, 'Visitor goes to royalglass.co.nz/estimate.')
+    numbered(doc, 'Visitor goes to royalglass.co.nz/cost-calculator/.')
     numbered(doc, 'They answer up to 9 questions about their project (type, length, materials, etc.).')
     numbered(doc, 'They enter their contact details and consent to being contacted.')
     numbered(doc, 'They see their price range instantly on screen.')
@@ -498,14 +498,14 @@ def build_doc():
     numbered(doc, 'Create the calculator page:')
     bullet(doc, 'Pages → Add New', level=1)
     bullet(doc, 'Title: "Get an Instant Estimate" (or any name)', level=1)
-    bullet(doc, 'Slug: estimate (so the URL is royalglass.co.nz/estimate)', level=1)
+    bullet(doc, 'Slug: cost-calculator (so the URL is royalglass.co.nz/cost-calculator/)', level=1)
     bullet(doc, 'Content: add the shortcode  [rg_calculator]', level=1)
     bullet(doc, 'Page template: Full Width (hides the sidebar for a clean layout)', level=1)
     bullet(doc, 'Publish', level=1)
     numbered(doc, 'Fix permalinks if the calculator doesn\'t load:')
     bullet(doc, 'Settings → Permalinks → select "Post name" → Save Changes.', level=1)
     numbered(doc, 'Add the configuration constants to wp-config.php (see section 4.4).')
-    numbered(doc, 'Verify: visit the estimate page — the calculator should appear.')
+    numbered(doc, 'Verify: visit the cost calculator page — the calculator should appear.')
 
     h2(doc, '4.3 — Updating the Plugin')
 
@@ -1155,14 +1155,14 @@ def build_doc():
     numbered(doc, 'Package ZIP (Compress-Archive)')
     numbered(doc, 'Upload to WordPress → Plugins → Upload')
     numbered(doc, 'Activate plugin')
-    numbered(doc, 'Verify /estimate page loads the calculator')
+    numbered(doc, 'Verify /cost-calculator/ page loads the calculator')
     numbered(doc, 'Submit a test lead and confirm all three emails arrive')
     numbered(doc, 'Check WP Admin → Leads shows the test submission')
 
     h2(doc, 'Contacts & resources')
     two_col_table(doc, [
         ('Royal Glass website',         'royalglass.co.nz'),
-        ('Calculator estimate page',    'royalglass.co.nz/estimate'),
+        ('Calculator page',             'royalglass.co.nz/cost-calculator/'),
         ('WordPress admin',             'royalglass.co.nz/wp-admin'),
         ('Cloudflare Turnstile',        'dash.cloudflare.com → Turnstile'),
         ('ServiceM8',                   'app.servicem8.com'),
