@@ -169,7 +169,6 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
   async function ensureTurnstileToken(): Promise<boolean> {
     const config = getConfig();
     if (!config.turnstileSiteKey) return true;
-    if (turnstileToken.current) return true;
     if (!window.turnstile || !turnstileWidgetId.current) {
       setServerError('Security check is still loading. Please wait a moment and try again.');
       return false;
