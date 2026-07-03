@@ -2,6 +2,7 @@
 if (!defined('ABSPATH')) exit;
 
 define('RG_DB_VERSION', '2.5.0');
+define('RG_CALCULATOR_OUTBOX_MAX_ATTEMPTS', 5);
 
 function rg_create_leads_table(): void {
     global $wpdb;
@@ -70,6 +71,40 @@ function rg_create_leads_table(): void {
     }
     if (!in_array('timeframe', $existing, true)) {
         $wpdb->query("ALTER TABLE {$table} ADD COLUMN timeframe VARCHAR(30) NOT NULL DEFAULT '' AFTER customer_type");
+    }
+
+    rg_create_outbox_table();
+}
+
+function rg_create_outbox_table(): void {
+    global $wpdb;
+    $table   = $wpdb->prefix . 'rg_calculator_outbox';
+    $charset = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+        id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        submission_ref  VARCHAR(100)    NOT NULL,
+        status          VARCHAR(20)     NOT NULL DEFAULT 'pending',
+        payload         LONGTEXT        NOT NULL,
+        attempts        INT UNSIGNED    NOT NULL DEFAULT 0,
+        last_error      TEXT            NOT NULL DEFAULT '',
+        next_retry_at   DATETIME        NULL,
+        rgtools_lead_id VARCHAR(100)    NOT NULL DEFAULT '',
+        alert_sent_at  DATETIME        NULL,
+        created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY submission_ref (submission_ref),
+        KEY status_next_retry (status, next_retry_at),
+        KEY updated_at (updated_at)
+    ) {$charset};";
+
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta($sql);
+
+    $existing = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+    if (!in_array('alert_sent_at', $existing, true)) {
+        $wpdb->query("ALTER TABLE {$table} ADD COLUMN alert_sent_at DATETIME NULL AFTER rgtools_lead_id");
     }
 }
 
@@ -151,4 +186,204 @@ function rg_update_lead_status(int $id, string $status): void {
         ['%s'],
         ['%d']
     );
+}
+
+function rg_save_failed_forward_outbox(string $submission_ref, array $payload, string $error): void {
+    global $wpdb;
+    $table = $wpdb->prefix . 'rg_calculator_outbox';
+    $now = current_time('mysql', true);
+    $next_retry_at = gmdate('Y-m-d H:i:s', time() + 5 * MINUTE_IN_SECONDS);
+    $payload_json = wp_json_encode($payload);
+
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, attempts FROM {$table} WHERE submission_ref = %s LIMIT 1",
+        $submission_ref
+    ));
+
+    if ($existing) {
+        $wpdb->update(
+            $table,
+            [
+                'status'        => 'pending',
+                'payload'       => $payload_json,
+                'attempts'      => ((int) $existing->attempts) + 1,
+                'last_error'    => sanitize_text_field($error),
+                'next_retry_at' => $next_retry_at,
+                'updated_at'    => $now,
+            ],
+            ['id' => (int) $existing->id],
+            ['%s','%s','%d','%s','%s','%s'],
+            ['%d']
+        );
+        rg_log_calculator_outbox_event('initial_forward_failed', $submission_ref, ((int) $existing->attempts) + 1, $error);
+        return;
+    }
+
+    $wpdb->insert(
+        $table,
+        [
+            'submission_ref' => $submission_ref,
+            'status'        => 'pending',
+            'payload'       => $payload_json,
+            'attempts'      => 1,
+            'last_error'    => sanitize_text_field($error),
+            'next_retry_at' => $next_retry_at,
+            'created_at'    => $now,
+            'updated_at'    => $now,
+        ],
+        ['%s','%s','%s','%d','%s','%s','%s','%s']
+    );
+    rg_log_calculator_outbox_event('initial_forward_failed', $submission_ref, 1, $error);
+}
+
+function rg_get_due_forward_outbox_entries(int $limit = 10): array {
+    global $wpdb;
+    $table = $wpdb->prefix . 'rg_calculator_outbox';
+    $now = current_time('mysql', true);
+
+    return $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$table}
+         WHERE status IN ('pending', 'failed')
+           AND attempts < %d
+           AND (next_retry_at IS NULL OR next_retry_at <= %s)
+         ORDER BY updated_at ASC
+         LIMIT %d",
+        RG_CALCULATOR_OUTBOX_MAX_ATTEMPTS,
+        $now,
+        max(1, min(50, $limit))
+    )) ?: [];
+}
+
+function rg_calculator_outbox_retry_delay_seconds(int $attempts): int {
+    $base = 5 * MINUTE_IN_SECONDS;
+    $delay = $base * (2 ** max(0, $attempts - 1));
+    return min((int) $delay, HOUR_IN_SECONDS);
+}
+
+function rg_mark_forward_outbox_sent(int $id, string $lead_id = ''): void {
+    global $wpdb;
+    $wpdb->update(
+        $wpdb->prefix . 'rg_calculator_outbox',
+        [
+            'status'          => 'sent',
+            'last_error'      => '',
+            'next_retry_at'   => null,
+            'rgtools_lead_id' => sanitize_text_field($lead_id),
+            'updated_at'      => current_time('mysql', true),
+        ],
+        ['id' => $id],
+        ['%s','%s','%s','%s','%s'],
+        ['%d']
+    );
+}
+
+function rg_mark_forward_outbox_failed(int $id, int $current_attempts, string $error): void {
+    global $wpdb;
+    $table = $wpdb->prefix . 'rg_calculator_outbox';
+    $attempts = $current_attempts + 1;
+    $exhausted = $attempts >= RG_CALCULATOR_OUTBOX_MAX_ATTEMPTS;
+    $next_retry_at = $exhausted
+        ? null
+        : gmdate('Y-m-d H:i:s', time() + rg_calculator_outbox_retry_delay_seconds($attempts));
+
+    $wpdb->update(
+        $table,
+        [
+            'status'        => $exhausted ? 'exhausted' : 'failed',
+            'attempts'      => $attempts,
+            'last_error'    => sanitize_text_field($error),
+            'next_retry_at' => $next_retry_at,
+            'updated_at'    => current_time('mysql', true),
+        ],
+        ['id' => $id],
+        ['%s','%d','%s','%s','%s'],
+        ['%d']
+    );
+
+    $entry = rg_get_forward_outbox_entry($id);
+    $submission_ref = $entry ? (string) $entry->submission_ref : '';
+    rg_log_calculator_outbox_event(
+        $exhausted ? 'retry_exhausted' : 'retry_failed',
+        $submission_ref,
+        $attempts,
+        $error
+    );
+
+    if ($exhausted && $entry && empty($entry->alert_sent_at)) {
+        rg_notify_calculator_outbox_attention($entry, $error);
+        $wpdb->update(
+            $table,
+            ['alert_sent_at' => current_time('mysql', true)],
+            ['id' => $id],
+            ['%s'],
+            ['%d']
+        );
+    }
+}
+
+function rg_retry_failed_forward_outbox_batch(int $limit = 10): void {
+    foreach (rg_get_due_forward_outbox_entries($limit) as $entry) {
+        rg_retry_forward_outbox_entry($entry);
+    }
+}
+
+function rg_get_forward_outbox_entry(int $id): ?object {
+    global $wpdb;
+    $table = $wpdb->prefix . 'rg_calculator_outbox';
+    $entry = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table} WHERE id = %d LIMIT 1",
+        $id
+    ));
+    return $entry ?: null;
+}
+
+function rg_retry_forward_outbox_entry(object $entry): array {
+    $payload = json_decode((string) $entry->payload, true);
+    if (!is_array($payload)) {
+        rg_mark_forward_outbox_failed((int) $entry->id, (int) $entry->attempts, 'invalid_payload');
+        return ['ok' => false, 'error' => 'invalid_payload'];
+    }
+
+    $payload['submissionRef'] = rg_normalize_submission_ref($entry->submission_ref);
+    $result = rg_submit_lead_to_rgtools($payload);
+    if ($result['ok']) {
+        rg_mark_forward_outbox_sent((int) $entry->id, (string) ($result['leadId'] ?? ''));
+        return ['ok' => true, 'leadId' => (string) ($result['leadId'] ?? '')];
+    }
+
+    $error = (string) ($result['error'] ?? 'retry_failed');
+    rg_mark_forward_outbox_failed((int) $entry->id, (int) $entry->attempts, $error);
+    return ['ok' => false, 'error' => $error];
+}
+
+function rg_log_calculator_outbox_event(string $event, string $submission_ref, int $attempts, string $error): void {
+    error_log(wp_json_encode([
+        'source'        => 'rg-calculator-outbox',
+        'event'         => $event,
+        'submissionRef' => $submission_ref,
+        'attempts'      => $attempts,
+        'error'         => sanitize_text_field($error),
+    ]));
+}
+
+function rg_notify_calculator_outbox_attention(object $entry, string $error): void {
+    if (!defined('RG_LEAD_NOTIFY_EMAIL') || !RG_LEAD_NOTIFY_EMAIL) {
+        return;
+    }
+
+    $submission_ref = sanitize_text_field($entry->submission_ref ?? '');
+    $subject = 'Calculator lead forward exhausted';
+    $body = implode("\n", [
+        'A calculator submission could not be forwarded to rgtools after repeated retries.',
+        '',
+        'Submission Ref: ' . $submission_ref,
+        'Status: exhausted',
+        'Attempts: ' . (int) ($entry->attempts ?? 0),
+        'Last error: ' . sanitize_text_field($error),
+        '',
+        'Review in WordPress: RG Calculator > Recovery Queue.',
+        'Use rgtools as the lead workspace once recovery succeeds.',
+    ]);
+
+    wp_mail((string) RG_LEAD_NOTIFY_EMAIL, $subject, $body);
 }

@@ -113,6 +113,7 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
     if (!is_array($body)) {
         return rg_error('Invalid JSON payload', 400);
     }
+    $submission_ref = rg_normalize_submission_ref($body['submissionRef'] ?? '');
 
     // ── 1. Time gate: reject if submitted in under 3 seconds ──────────────
     $loaded_at = isset($body['loadedAt']) ? (int) $body['loadedAt'] : 0;
@@ -166,39 +167,32 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         return rg_error($answers_validation->get_error_message(), 422);
     }
 
-    // ── 6. Save to database ────────────────────────────────────────────────
-    $lead_id = rg_save_lead($lead, $answers, $est);
-    if (!$lead_id) {
-        return rg_error('Unable to save lead. Please call us on 0800 769 254.', 500);
-    }
-
-    // ── 7. All emails — async after response is flushed ──────────────────
-    $email_lead_id = $lead_id;
-    $email_lead    = $lead;
-    $email_answers = $answers;
-    $email_est     = $est;
+    // Forward to rgtools. WordPress is only the same-origin browser proxy here.
     $forward_payload = [
+        'submissionRef'  => $submission_ref,
         'answers'        => $answers,
         'lead'           => $lead,
         'estimate'       => $est,
         'turnstileToken' => $token,
         'loadedAt'       => $loaded_at,
-        'wordpressLeadId' => $lead_id,
     ];
-    add_action('shutdown', function() use ($email_lead_id, $email_lead, $email_answers, $email_est, $forward_payload) {
-        if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
-        ignore_user_abort(true);
-        rg_send_lead_email($email_lead_id, $email_lead, $email_answers, $email_est);
-        rg_sm8_send_immediate($email_lead_id, $email_lead, $email_answers, $email_est);
-        rg_forward_lead_to_rgtools($email_lead_id, $forward_payload);
-        $customer_email = sanitize_email($email_lead['email'] ?? '');
-        $customer_name  = sanitize_text_field($email_lead['firstName'] ?? '');
-        if (is_email($customer_email)) {
-            rg_send_estimate_email_to_customer($customer_email, $customer_name, $email_answers, $email_est);
-        }
-    });
+    $rgtools_result = rg_submit_lead_to_rgtools($forward_payload);
+    if (!$rgtools_result['ok']) {
+        rg_save_failed_forward_outbox(
+            $submission_ref,
+            rg_payload_without_turnstile($forward_payload),
+            (string) ($rgtools_result['error'] ?? 'forward_failed')
+        );
+        return rg_error('Unable to submit lead. Please call us on 0800 769 254.', 502);
+    }
 
-    return new WP_REST_Response(['ok' => true, 'leadId' => $lead_id], 201);
+    // rgtools owns lead storage, customer email, and ServiceM8 sync.
+    return new WP_REST_Response([
+        'ok'            => true,
+        'leadId'        => $rgtools_result['leadId'],
+        'source'        => 'rgtools',
+        'submissionRef' => $submission_ref,
+    ], 201);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -244,19 +238,46 @@ function rg_get_rgtools_submit_url(): string {
     return 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit';
 }
 
-function rg_forward_lead_to_rgtools(int $lead_id, array $payload): void {
+function rg_normalize_submission_ref($value): string {
+    $ref = sanitize_text_field((string) $value);
+    if (preg_match('/^rgcalc_[a-z0-9]+_[a-z0-9]+$/', $ref)) {
+        return $ref;
+    }
+
+    $uuid = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : uniqid('', true);
+    $token = strtolower(preg_replace('/[^a-z0-9]/', '', (string) $uuid));
+    if ($token === '') {
+        $token = strtolower(bin2hex(random_bytes(6)));
+    }
+
+    return 'rgcalc_' . base_convert((string) time(), 10, 36) . '_' . substr($token, 0, 12);
+}
+
+function rg_payload_without_turnstile(array $payload): array {
+    unset($payload['turnstileToken']);
+    return $payload;
+}
+
+function rg_submit_lead_to_rgtools(array $payload): array {
     $url = rg_get_rgtools_submit_url();
-    if (!$url) return;
+    $submission_ref = rg_normalize_submission_ref($payload['submissionRef'] ?? '');
+    $payload['submissionRef'] = $submission_ref;
+
+    if (!$url) {
+        return ['ok' => false, 'error' => 'rgtools_url_missing'];
+    }
+
+    if (!defined('RGTOOLS_SUBMIT_SECRET') || !RGTOOLS_SUBMIT_SECRET) {
+        error_log("RG Tools forward failed for {$submission_ref}: RGTOOLS_SUBMIT_SECRET is not configured");
+        return ['ok' => false, 'error' => 'rgtools_secret_missing'];
+    }
 
     $headers = [
-        'Content-Type' => 'application/json',
-        'Origin'       => home_url('', 'https'),
+        'Content-Type'           => 'application/json',
+        'X-RG-Calculator-Secret' => (string) RGTOOLS_SUBMIT_SECRET,
     ];
 
-    if (defined('RGTOOLS_SUBMIT_SECRET') && RGTOOLS_SUBMIT_SECRET) {
-        $headers['X-RG-Calculator-Secret'] = (string) RGTOOLS_SUBMIT_SECRET;
-        unset($payload['turnstileToken']);
-    }
+    $payload = rg_payload_without_turnstile($payload);
 
     $response = wp_remote_post($url, [
         'timeout'  => 8,
@@ -266,17 +287,27 @@ function rg_forward_lead_to_rgtools(int $lead_id, array $payload): void {
     ]);
 
     if (is_wp_error($response)) {
-        error_log("RG Tools forward failed for lead #{$lead_id}: " . $response->get_error_message());
-        return;
+        error_log("RG Tools forward failed for {$submission_ref}: " . $response->get_error_message());
+        return ['ok' => false, 'error' => $response->get_error_message()];
     }
 
     $status = (int) wp_remote_retrieve_response_code($response);
+    $body   = json_decode(wp_remote_retrieve_body($response), true);
+
     if ($status < 200 || $status >= 300) {
-        error_log("RG Tools forward failed for lead #{$lead_id}: HTTP {$status} " . wp_remote_retrieve_body($response));
-        return;
+        error_log("RG Tools forward failed for {$submission_ref}: HTTP {$status} " . wp_remote_retrieve_body($response));
+        return ['ok' => false, 'error' => "http_{$status}"];
     }
 
-    error_log("RG Tools forward succeeded for lead #{$lead_id}");
+    if (!is_array($body) || empty($body['ok'])) {
+        error_log("RG Tools forward failed for {$submission_ref}: invalid response body");
+        return ['ok' => false, 'error' => 'invalid_response'];
+    }
+
+    $lead_id = sanitize_text_field($body['leadId'] ?? $body['id'] ?? '');
+    error_log("RG Tools forward succeeded for {$submission_ref} lead {$lead_id}");
+
+    return ['ok' => true, 'leadId' => $lead_id];
 }
 
 function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {

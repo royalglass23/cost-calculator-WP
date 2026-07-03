@@ -33,18 +33,39 @@ require_once RG_CALC_DIR . 'includes/api.php';
 require_once RG_CALC_DIR . 'includes/servicem8.php';
 require_once RG_CALC_DIR . 'includes/admin-pricing.php';
 require_once RG_CALC_DIR . 'includes/admin-leads.php';
+require_once RG_CALC_DIR . 'includes/admin-outbox.php';
 
 // ── Activation: create DB table ───────────────────────────────────────────────
 register_activation_hook(__FILE__, 'rg_calc_activate');
 function rg_calc_activate() {
     rg_create_leads_table();
     rg_sm8_schedule_cron();
+    rg_calc_schedule_outbox_retry();
 }
 // ── Deactivation: clear cron ──────────────────────────────────────────────────
 register_deactivation_hook(__FILE__, 'rg_calc_deactivate');
 function rg_calc_deactivate() {
     rg_sm8_unschedule_cron();
+    wp_clear_scheduled_hook('rg_calculator_retry_outbox');
 }
+
+add_filter('cron_schedules', 'rg_calc_cron_schedules');
+function rg_calc_cron_schedules(array $schedules): array {
+    $schedules['rg_every_five_minutes'] = [
+        'interval' => 5 * MINUTE_IN_SECONDS,
+        'display'  => 'Every five minutes',
+    ];
+    return $schedules;
+}
+
+add_action('init', 'rg_calc_schedule_outbox_retry');
+function rg_calc_schedule_outbox_retry(): void {
+    if (!wp_next_scheduled('rg_calculator_retry_outbox')) {
+        wp_schedule_event(time() + 5 * MINUTE_IN_SECONDS, 'rg_every_five_minutes', 'rg_calculator_retry_outbox');
+    }
+}
+
+add_action('rg_calculator_retry_outbox', 'rg_retry_failed_forward_outbox_batch');
 
 // ── Shortcode ─────────────────────────────────────────────────────────────────
 add_shortcode('rg_calculator', 'rg_calc_shortcode');
