@@ -177,11 +177,20 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
     $email_lead    = $lead;
     $email_answers = $answers;
     $email_est     = $est;
-    add_action('shutdown', function() use ($email_lead_id, $email_lead, $email_answers, $email_est) {
+    $forward_payload = [
+        'answers'        => $answers,
+        'lead'           => $lead,
+        'estimate'       => $est,
+        'turnstileToken' => $token,
+        'loadedAt'       => $loaded_at,
+        'wordpressLeadId' => $lead_id,
+    ];
+    add_action('shutdown', function() use ($email_lead_id, $email_lead, $email_answers, $email_est, $forward_payload) {
         if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
         ignore_user_abort(true);
         rg_send_lead_email($email_lead_id, $email_lead, $email_answers, $email_est);
         rg_sm8_send_immediate($email_lead_id, $email_lead, $email_answers, $email_est);
+        rg_forward_lead_to_rgtools($email_lead_id, $forward_payload);
         $customer_email = sanitize_email($email_lead['email'] ?? '');
         $customer_name  = sanitize_text_field($email_lead['firstName'] ?? '');
         if (is_email($customer_email)) {
@@ -221,6 +230,53 @@ function rg_check_rate_limit(string $ip): bool {
 
     set_transient($key, $count + 1, $window);
     return true;
+}
+
+function rg_get_rgtools_submit_url(): string {
+    if (defined('RGTOOLS_SUBMIT_URL') && RGTOOLS_SUBMIT_URL) {
+        return esc_url_raw(RGTOOLS_SUBMIT_URL);
+    }
+
+    if (defined('RG_RGTOOLS_SUBMIT_URL') && RG_RGTOOLS_SUBMIT_URL) {
+        return esc_url_raw(RG_RGTOOLS_SUBMIT_URL);
+    }
+
+    return 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit';
+}
+
+function rg_forward_lead_to_rgtools(int $lead_id, array $payload): void {
+    $url = rg_get_rgtools_submit_url();
+    if (!$url) return;
+
+    $headers = [
+        'Content-Type' => 'application/json',
+        'Origin'       => home_url('', 'https'),
+    ];
+
+    if (defined('RGTOOLS_SUBMIT_SECRET') && RGTOOLS_SUBMIT_SECRET) {
+        $headers['X-RG-Calculator-Secret'] = (string) RGTOOLS_SUBMIT_SECRET;
+        unset($payload['turnstileToken']);
+    }
+
+    $response = wp_remote_post($url, [
+        'timeout'  => 8,
+        'blocking' => true,
+        'headers'  => $headers,
+        'body'     => wp_json_encode($payload),
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log("RG Tools forward failed for lead #{$lead_id}: " . $response->get_error_message());
+        return;
+    }
+
+    $status = (int) wp_remote_retrieve_response_code($response);
+    if ($status < 200 || $status >= 300) {
+        error_log("RG Tools forward failed for lead #{$lead_id}: HTTP {$status} " . wp_remote_retrieve_body($response));
+        return;
+    }
+
+    error_log("RG Tools forward succeeded for lead #{$lead_id}");
 }
 
 function rg_handle_estimate_email(WP_REST_Request $request): WP_REST_Response {
