@@ -11,18 +11,21 @@ const TURNSTILE_TIMEOUT_MS = 15000;
 const TURNSTILE_MAX_ATTEMPTS = 3;
 
 function getLeadSubmitTarget(config: ReturnType<typeof getConfig>) {
-  const rgtoolsSubmitUrl = config.rgtoolsSubmitUrl?.trim();
-  if (rgtoolsSubmitUrl) {
-    return {
-      url: rgtoolsSubmitUrl,
-      headers: { 'Content-Type': 'application/json' },
-    };
-  }
-
   return {
     url: `${config.restUrl}/leads`,
     headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
   };
+}
+
+async function postLead(
+  target: { url: string; headers: Record<string, string> },
+  body: string
+) {
+  return fetch(target.url, {
+    method: 'POST',
+    headers: target.headers,
+    body,
+  });
 }
 
 declare global {
@@ -220,12 +223,9 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         consent: lead.consent,
         websiteUrl: honeypotRef.current?.value ?? '',
       };
+      const body = JSON.stringify({ answers, lead: payloadLead, estimate, turnstileToken: turnstileToken.current, loadedAt });
       const submitTarget = getLeadSubmitTarget(config);
-      const res = await fetch(submitTarget.url, {
-        method: 'POST',
-        headers: submitTarget.headers,
-        body: JSON.stringify({ answers, lead: payloadLead, estimate, turnstileToken: turnstileToken.current, loadedAt }),
-      });
+      const res = await postLead(submitTarget, body);
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok !== false) onSuccess(data.leadId ?? data.id ?? '', lead.email, firstName ?? '');
       else setServerError(data.error ?? 'Something went wrong. Please try again.');
