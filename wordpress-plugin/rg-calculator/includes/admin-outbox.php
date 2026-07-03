@@ -17,6 +17,8 @@ function rg_admin_outbox_menu(): void {
 function rg_admin_outbox_page(): void {
     if (!current_user_can('manage_options')) return;
 
+    rg_ensure_outbox_table();
+
     $notice = rg_handle_admin_outbox_retry();
     $status_filter = sanitize_text_field($_GET['status'] ?? '');
     $allowed_statuses = ['pending', 'failed', 'sent', 'exhausted'];

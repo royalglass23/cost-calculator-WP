@@ -2,7 +2,7 @@
 if (!defined('ABSPATH')) exit;
 
 function rg_send_lead_email(int $lead_id, array $lead, array $answers, array $est): void {
-    $to      = defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email');
+    $to      = rg_get_lead_notify_email();
     $l       = rg_sanitize_lead($lead);
     $a       = rg_sanitize_answers($answers);
     $e       = rg_sanitize_estimate($est);
@@ -154,7 +154,7 @@ ROW;
 
     $name       = sanitize_text_field($first_name ?: 'there');
     $name_html  = esc_html($name);
-    $from_email = sanitize_email(defined('RG_LEAD_NOTIFY_EMAIL') ? RG_LEAD_NOTIFY_EMAIL : get_option('admin_email'));
+    $from_email = rg_get_lead_notify_email();
     $subject    = "{$name}, your Royal Glass estimate is here";
 
     $html = <<<HTML

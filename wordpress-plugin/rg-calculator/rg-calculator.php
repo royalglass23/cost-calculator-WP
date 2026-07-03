@@ -13,10 +13,11 @@
  *   define('RG_GOOGLE_MAPS_KEY',   'AIza...');       // Google Maps Platform API key
  *   define('RG_TURNSTILE_SITE_KEY','0x...');         // Cloudflare Turnstile site key
  *   define('RG_TURNSTILE_SECRET',  '0x...');         // Cloudflare Turnstile secret key
- *   define('RGTOOLS_SUBMIT_URL',   'https://www.rgtools.co.nz/api/lead-intake/calculator-submit');
  *   define('RGTOOLS_SUBMIT_SECRET','same-secret-as-rgtools-vercel-env');
- *   define('RG_LEAD_NOTIFY_EMAIL', 'info@royalglass.co.nz'); // who gets new lead notifications
+ *   define('RG_LEAD_NOTIFY_EMAIL', 'support@royalglass.co.nz'); // optional override for lead/recovery notifications
  *   define('RG_SM8_INBOX_EMAIL',   'de9f86@inbox.servicem8.com'); // ServiceM8 inbox (comma-separate to add test address)
+ *
+ *   Choose the rgtools Development/Production target in RG Calculator > Settings.
  */
 
 if (!defined('ABSPATH')) exit;
@@ -27,6 +28,7 @@ define('RG_CALC_URL',       plugin_dir_url(__FILE__));
 
 // ── Load includes ─────────────────────────────────────────────────────────────
 require_once RG_CALC_DIR . 'includes/database.php';
+require_once RG_CALC_DIR . 'includes/settings.php';
 require_once RG_CALC_DIR . 'includes/validation.php';
 require_once RG_CALC_DIR . 'includes/email.php';
 require_once RG_CALC_DIR . 'includes/api.php';
@@ -115,11 +117,7 @@ function rg_calc_enqueue_assets() {
     // Pass config to the React app via window.rgCalculatorConfig
     wp_localize_script('rg-calculator', 'rgCalculatorConfig', [
         'restUrl'          => esc_url_raw(rest_url('royal-glass/v1')),
-        'rgtoolsSubmitUrl' => defined('RGTOOLS_SUBMIT_URL') && RGTOOLS_SUBMIT_URL
-            ? esc_url_raw(RGTOOLS_SUBMIT_URL)
-            : (defined('RG_RGTOOLS_SUBMIT_URL') && RG_RGTOOLS_SUBMIT_URL
-                ? esc_url_raw(RG_RGTOOLS_SUBMIT_URL)
-                : 'https://www.rgtools.co.nz/api/lead-intake/calculator-submit'),
+        'rgtoolsSubmitUrl' => rg_get_rgtools_submit_url(),
         'nonce'            => wp_create_nonce('wp_rest'),
         'googleMapsKey'    => defined('RG_GOOGLE_MAPS_KEY')    ? RG_GOOGLE_MAPS_KEY    : '',
         'turnstileSiteKey' => defined('RG_TURNSTILE_SITE_KEY') ? RG_TURNSTILE_SITE_KEY : '',
