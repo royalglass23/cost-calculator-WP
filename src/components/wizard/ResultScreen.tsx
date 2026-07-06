@@ -220,6 +220,9 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
             <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0 }}>
               {firstName ? `A copy is on its way to ${firstName}'s inbox.` : 'A copy is on its way to your inbox.'} Forward to a builder, partner, or architect below.
             </p>
+            <p style={{ fontSize: '12px', color: '#2563eb', margin: '6px 0 0' }}>
+              If you do not see it in your inbox, please check your Spam or Promotions folder.
+            </p>
           </div>
         </div>
 
@@ -232,7 +235,7 @@ export function ResultScreen({ answers, estimate, leadId, email, firstName }: Pr
             </div>
             <div>
               <p style={{ fontSize: '14px', fontWeight: 600, color: '#15803d', marginTop: 0, marginBottom: '2px' }}>Sent! Check your inbox.</p>
-              <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>Can't find it? Check your spam folder, or call us on 0800 769 254.</p>
+              <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>Can't find it? Check your Spam or Promotions folder, or call us on 0800 769 254.</p>
             </div>
           </div>
         ) : (
