@@ -35,6 +35,12 @@ test('failed rgtools forwards are saved to the outbox without storing Turnstile 
   assert.match(apiPhp, /unset\(\$payload\['turnstileToken'\]\)/);
 });
 
+test('WordPress forwards lead-intake prefill fields to rgtools when present', () => {
+  assert.match(apiPhp, /is_array\(\$body\['leadIntake'\] \?\? null\)/);
+  assert.match(apiPhp, /\$forward_payload\['leadIntake'\] = \$body\['leadIntake'\]/);
+  assert.match(apiPhp, /rg_submit_lead_to_rgtools\(\$forward_payload\)/);
+});
+
 test('admin-selectable rgtools target controls submit and pricing endpoints', () => {
   assert.match(pluginPhp, /includes\/settings\.php/);
   assert.match(settingsPhp, /RG_CALCULATOR_RGTOOLS_TARGET_OPTION/);

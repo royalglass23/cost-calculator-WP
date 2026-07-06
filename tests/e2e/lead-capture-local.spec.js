@@ -56,6 +56,23 @@ test('lead capture posts a clearly marked test-only lead payload', async ({ page
   expect(submittedPayload?.lead?.lastName).toBe('TEST ONLY Lead');
   expect(submittedPayload?.lead?.consent).toBe(true);
   expect(submittedPayload?.submissionRef).toMatch(/^rgcalc_[a-z0-9]+_[a-z0-9]+$/);
+  expect(submittedPayload?.leadIntake).toMatchObject({
+    clientName: 'Codex TEST ONLY Lead',
+    companyName: '',
+    phone: '021 123 4567',
+    email: 'royalglass666@gmail.com',
+    clientProfileKey: 'homeowner',
+    projectType: 'pool_fence',
+    product: 'pool_fence',
+    location: '123 TEST ONLY Street, Auckland 1010',
+    source: 'calculator',
+    leadSource: 'website_google_walk_in_cold_lead',
+    timeline: 'just_planning',
+    freeText: 'TEST ONLY - E2E lead capture submission by Codex. Please ignore/delete.',
+  });
+  expect(submittedPayload?.leadIntake?.externalRef).toBe(submittedPayload?.submissionRef);
+  expect(submittedPayload?.leadIntake?.jobDescription).toContain('Premium Pool Fence');
+  expect(submittedPayload?.leadIntake?.jobDescription).toContain('Spigot Round');
 });
 
 test('lead capture uses WordPress leads endpoint even when rgtools submit URL is configured', async ({ page }) => {
@@ -132,6 +149,8 @@ test('lead capture uses WordPress leads endpoint even when rgtools submit URL is
   expect(bridgeAttempted).toBe(false);
   expect(submittedPayload?.lead?.email).toBe('royalglass666@gmail.com');
   expect(submittedPayload?.lead?.notes).toContain('TEST ONLY');
+  expect(submittedPayload?.leadIntake?.source).toBe('calculator');
+  expect(submittedPayload?.leadIntake?.externalRef).toBe(submittedPayload?.submissionRef);
 });
 
 test('lead capture keeps the same submission reference when a failed submit is retried', async ({ page }) => {

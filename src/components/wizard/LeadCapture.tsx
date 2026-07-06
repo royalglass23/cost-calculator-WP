@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import type { LeadData, WizardAnswers, EstimateResult, CustomerType, Timeframe } from '../../lib/calculator/types';
 import { getConfig } from '../../hooks/usePricing';
 import { NZAddressAutocomplete } from './NZAddressAutocomplete';
+import { mapCalculatorToLeadIntakePrefill } from '../../lib/calculator/leadIntakeMapping';
 
 const s = (base: React.CSSProperties): React.CSSProperties => base;
 
@@ -233,10 +234,17 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
         consent: lead.consent,
         websiteUrl: honeypotRef.current?.value ?? '',
       };
+      const leadIntake = mapCalculatorToLeadIntakePrefill({
+        answers,
+        estimate,
+        lead: payloadLead,
+        submissionRef: submissionRef.current,
+      });
       const body = JSON.stringify({
         submissionRef: submissionRef.current,
         answers,
         lead: payloadLead,
+        leadIntake,
         estimate,
         turnstileToken: turnstileToken.current,
         loadedAt,
