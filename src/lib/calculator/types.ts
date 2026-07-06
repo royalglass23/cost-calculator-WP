@@ -95,6 +95,7 @@ export interface EstimateResult {
 export interface LeadPayload {
   answers: WizardAnswers;
   lead: LeadData;
+  leadIntake?: Record<string, unknown>;
   estimate: EstimateResult;
   turnstileToken: string;
   loadedAt: number;

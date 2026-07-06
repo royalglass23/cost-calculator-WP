@@ -176,6 +176,10 @@ function rg_handle_lead(WP_REST_Request $request): WP_REST_Response {
         'turnstileToken' => $token,
         'loadedAt'       => $loaded_at,
     ];
+    if (is_array($body['leadIntake'] ?? null)) {
+        $forward_payload['leadIntake'] = $body['leadIntake'];
+    }
+
     $rgtools_result = rg_submit_lead_to_rgtools($forward_payload);
     if (!$rgtools_result['ok']) {
         rg_save_failed_forward_outbox(
