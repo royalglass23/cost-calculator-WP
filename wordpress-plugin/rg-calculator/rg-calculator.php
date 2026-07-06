@@ -3,7 +3,7 @@
  * Plugin Name: RG Cost Calculator
  * Plugin URI: https://royalglass.co.nz
  * Description: Frameless glass cost calculator with lead capture. Use shortcode [rg_calculator] on any page.
- * Version: 2.4.0
+ * Version: 2.4.1
  * Author: Royal Glass Limited
  * Text Domain: rg-calculator
  *
@@ -22,7 +22,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('RG_CALC_VERSION',  '2.4.0');
+define('RG_CALC_VERSION',  '2.4.1');
 define('RG_CALC_DIR',       plugin_dir_path(__FILE__));
 define('RG_CALC_URL',       plugin_dir_url(__FILE__));
 
