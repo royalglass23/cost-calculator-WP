@@ -332,6 +332,9 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
             <p style={{ fontSize: '13px', color: '#6b7280', margin: '4px 0 0' }}>
               This usually takes a few seconds
             </p>
+            <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0 0' }}>
+              We will email a copy too. If it is not in your inbox, check Spam or Promotions.
+            </p>
           </div>
         </div>
       )}
