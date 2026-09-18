@@ -39,8 +39,18 @@ async function postLead(
   });
 }
 
+function trackSuccessfulLead(): void {
+  window.dataLayer = window.dataLayer ?? [];
+  window.dataLayer.push({
+    event: 'rg_lead_success',
+    form_type: 'cost_calculator',
+    lead_source: 'website',
+  });
+}
+
 declare global {
   interface Window {
+    dataLayer?: unknown[];
     turnstile?: {
       render: (el: HTMLElement, o: Record<string, unknown>) => string;
       remove: (id: string) => void;
@@ -252,8 +262,12 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
       const submitTarget = getLeadSubmitTarget(config);
       const res = await postLead(submitTarget, body);
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.ok !== false) onSuccess(data.leadId ?? data.id ?? '', lead.email, firstName ?? '');
-      else setServerError(data.error ?? 'Something went wrong. Please try again.');
+      if (res.ok && data.ok !== false) {
+        trackSuccessfulLead();
+        onSuccess(data.leadId ?? data.id ?? '', lead.email, firstName ?? '');
+      } else {
+        setServerError(data.error ?? 'Something went wrong. Please try again.');
+      }
     } catch {
       setServerError('Unable to submit. Please check your connection or call 0800 769 254.');
     } finally {

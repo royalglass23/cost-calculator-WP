@@ -4,7 +4,16 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.3.1 — 2026-06-11 (current)
+## v2.4.3 — 2026-09-18 (current)
+
+### Analytics
+
+- Emit one `rg_lead_success` data-layer event only after `POST /wp-json/royal-glass/v1/leads` returns a successful response.
+- Include only non-personal event metadata (`form_type` and `lead_source`); names, email addresses, phone numbers, addresses, lead IDs, and submission references are excluded.
+- Add browser coverage confirming failed submissions emit no event and a successful retry emits exactly one event.
+- Bump the plugin asset version to `2.4.3` so WordPress and CDN caches request the rebuilt JavaScript.
+
+## v2.3.1 — 2026-06-11
 
 ### Bug fixes
 
