@@ -3,6 +3,10 @@ import { test, expect } from '@playwright/test';
 test('lead capture posts a clearly marked test-only lead payload', async ({ page }) => {
   let submittedPayload = null;
 
+  await page.addInitScript(() => {
+    window.dataLayer = [];
+  });
+
   await page.route('**/wp-json/royal-glass/v1/pricing', async (route) => {
     await route.fulfill({
       status: 200,
@@ -73,6 +77,17 @@ test('lead capture posts a clearly marked test-only lead payload', async ({ page
   expect(submittedPayload?.leadIntake?.externalRef).toBe(submittedPayload?.submissionRef);
   expect(submittedPayload?.leadIntake?.jobDescription).toContain('Premium Pool Fence');
   expect(submittedPayload?.leadIntake?.jobDescription).toContain('Spigot Round');
+
+  const leadEvents = await page.evaluate(() =>
+    window.dataLayer.filter((item) => item?.event === 'rg_lead_success')
+  );
+  expect(leadEvents).toEqual([
+    {
+      event: 'rg_lead_success',
+      form_type: 'cost_calculator',
+      lead_source: 'website',
+    },
+  ]);
 });
 
 test('lead capture uses WordPress leads endpoint even when rgtools submit URL is configured', async ({ page }) => {
@@ -157,6 +172,10 @@ test('lead capture keeps the same submission reference when a failed submit is r
   const submissionRefs = [];
   let attempt = 0;
 
+  await page.addInitScript(() => {
+    window.dataLayer = [];
+  });
+
   await page.route('**/wp-json/royal-glass/v1/pricing', async (route) => {
     await route.fulfill({
       status: 200,
@@ -215,6 +234,11 @@ test('lead capture keeps the same submission reference when a failed submit is r
   await page.waitForTimeout(3100);
   await page.getByRole('button', { name: /Show my estimate/i }).click();
   await expect(page.getByText('Temporary rgtools failure')).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      window.dataLayer.filter((item) => item?.event === 'rg_lead_success').length
+    )
+  ).toBe(0);
 
   await page.getByRole('button', { name: /Show my estimate/i }).click();
 
@@ -222,6 +246,11 @@ test('lead capture keeps the same submission reference when a failed submit is r
   expect(submissionRefs).toHaveLength(2);
   expect(submissionRefs[0]).toMatch(/^rgcalc_[a-z0-9]+_[a-z0-9]+$/);
   expect(submissionRefs[1]).toBe(submissionRefs[0]);
+  expect(
+    await page.evaluate(() =>
+      window.dataLayer.filter((item) => item?.event === 'rg_lead_success').length
+    )
+  ).toBe(1);
 });
 
 test('lead capture gets a fresh Turnstile token when retrying after a failed forward', async ({ page }) => {
