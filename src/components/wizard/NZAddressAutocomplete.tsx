@@ -4,6 +4,7 @@ import { getConfig } from '../../hooks/usePricing';
 interface NZAddressAutocompleteProps {
   value: string;
   onChange: (address: string) => void;
+  onBlur?: () => void;
   error?: string;
 }
 
@@ -84,7 +85,7 @@ function loadGooglePlacesScript(apiKey: string): Promise<void> {
   return googleMapsScriptPromise;
 }
 
-export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutocompleteProps) {
+export function NZAddressAutocomplete({ value, onChange, onBlur, error }: NZAddressAutocompleteProps) {
   const [query, setQuery]             = useState(value);
   const [results, setResults]         = useState<PlacesPrediction[]>([]);
   const [open, setOpen]               = useState(false);
@@ -233,6 +234,7 @@ export function NZAddressAutocomplete({ value, onChange, error }: NZAddressAutoc
           placeholder="23 Example Street, Auckland"
           value={query}
           onChange={handleInput}
+          onBlur={onBlur}
           onFocus={() => results.length > 0 && setOpen(true)}
           aria-label="Project address"
           aria-autocomplete={placesReady ? 'list' : 'none'}

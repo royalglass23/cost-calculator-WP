@@ -6,8 +6,10 @@ import { mapCalculatorToLeadIntakePrefill } from '../../lib/calculator/leadIntak
 
 const s = (base: React.CSSProperties): React.CSSProperties => base;
 
-const NZ_PHONE = /^(\+?64[\s-]?)?(\(?0?[2-9]\d?\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4})$/;
+const NZ_PHONE = /^(?:\+64|0)(?:2\d{7,9}|[3-9]\d{7}|800\d{6,7}|900\d{6,7})$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CUSTOMER_TYPE_ERROR = 'Choose the option that best describes you';
+const TIMEFRAME_ERROR = 'Choose when you plan to start';
 const TURNSTILE_TIMEOUT_MS = 15000;
 const TURNSTILE_MAX_ATTEMPTS = 3;
 
@@ -152,16 +154,31 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
     };
   }, []);
 
+  function fieldError(field: 'fullName' | 'phone' | 'email' | 'address'): string {
+    if (field === 'fullName') return lead.fullName.trim() ? '' : 'Name is required';
+    if (field === 'phone') {
+      if (!lead.phone.trim()) return 'Phone number is required';
+      return NZ_PHONE.test(lead.phone.replace(/[\s\-().]/g, '')) ? '' : 'Enter a valid NZ phone number';
+    }
+    if (field === 'email') {
+      if (!lead.email.trim()) return 'Email is required';
+      return EMAIL_RE.test(lead.email) ? '' : 'Enter a valid email address';
+    }
+    return lead.address.trim() ? '' : 'Project address is required';
+  }
+
+  function validateFieldOnBlur(field: 'fullName' | 'phone' | 'email' | 'address') {
+    setErrors(p => ({ ...p, [field]: fieldError(field) }));
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!lead.fullName.trim()) e.fullName = 'Name is required';
-    if (!lead.phone.trim()) e.phone = 'Phone number is required';
-    else if (!NZ_PHONE.test(lead.phone.replace(/\s/g, ''))) e.phone = 'Enter a valid NZ phone number';
-    if (!lead.email.trim()) e.email = 'Email is required';
-    else if (!EMAIL_RE.test(lead.email)) e.email = 'Enter a valid email address';
-    if (!lead.customerType) e.customerType = 'Please select one';
-    if (!lead.timeframe) e.timeframe = 'Please select one';
-    if (!lead.address.trim()) e.address = 'Project address is required';
+    for (const field of ['fullName', 'phone', 'email', 'address'] as const) {
+      const message = fieldError(field);
+      if (message) e[field] = message;
+    }
+    if (!lead.customerType) e.customerType = CUSTOMER_TYPE_ERROR;
+    if (!lead.timeframe) e.timeframe = TIMEFRAME_ERROR;
     if (!lead.consent) e.consent = 'Please agree to be contacted';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -359,6 +376,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
             <input type="text" autoComplete="name" placeholder="Sarah Johnson or Smith Builders Ltd"
               style={inputStyle(errors.fullName)} value={lead.fullName}
               onChange={e => { setLead(p => ({ ...p, fullName: e.target.value })); setErrors(p => ({ ...p, fullName: '' })); }}
+              onBlur={() => validateFieldOnBlur('fullName')}
             />
             {errMsg('fullName')}
           </div>
@@ -369,7 +387,8 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
               {label('Email', true)}
               <input type="email" autoComplete="email" placeholder="sarah@example.com"
                 style={inputStyle(errors.email)} value={lead.email}
-                onChange={e => { setLead(p => ({ ...p, email: e.target.value })); setErrors(p => ({ ...p, email: '' })); }}
+                onChange={e => { setLead(p => ({ ...p, email: e.target.value })); setErrors(p => ({ ...p, email: '' })); setServerError(''); }}
+                onBlur={() => validateFieldOnBlur('email')}
               />
               {errMsg('email')}
             </div>
@@ -381,7 +400,9 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
                   const cleaned = cleanPhoneInput(e.target.value);
                   setLead(p => ({ ...p, phone: cleaned }));
                   setErrors(p => ({ ...p, phone: '' }));
+                  setServerError('');
                 }}
+                onBlur={() => validateFieldOnBlur('phone')}
               />
               {errMsg('phone')}
             </div>
@@ -391,7 +412,14 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
             <div>
               {label("I'm a...", true)}
-              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '8px' }}>
+              <div
+                style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '8px' }}
+                onBlur={e => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setErrors(p => ({ ...p, customerType: lead.customerType ? '' : CUSTOMER_TYPE_ERROR }));
+                  }
+                }}
+              >
                 {CUSTOMER_TYPES.map(t => chip(t.label, lead.customerType === t.value, () => {
                   setLead(p => ({ ...p, customerType: t.value }));
                   setErrors(p => ({ ...p, customerType: '' }));
@@ -401,7 +429,14 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
             </div>
             <div>
               {label('Timeframe', true)}
-              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '8px' }}>
+              <div
+                style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '8px' }}
+                onBlur={e => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setErrors(p => ({ ...p, timeframe: lead.timeframe ? '' : TIMEFRAME_ERROR }));
+                  }
+                }}
+              >
                 {TIMEFRAMES.map(t => chip(t.label, lead.timeframe === t.value, () => {
                   setLead(p => ({ ...p, timeframe: t.value }));
                   setErrors(p => ({ ...p, timeframe: '' }));
@@ -417,6 +452,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
             <NZAddressAutocomplete
               value={lead.address}
               onChange={v => { setLead(p => ({ ...p, address: v })); setErrors(p => ({ ...p, address: '' })); }}
+              onBlur={() => validateFieldOnBlur('address')}
               error={errors.address}
             />
           </div>
@@ -443,6 +479,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
               <input type="checkbox" checked={lead.consent}
                 onChange={e => { setLead(p => ({ ...p, consent: e.target.checked })); setErrors(p => ({ ...p, consent: '' })); }}
+                onBlur={() => setErrors(p => ({ ...p, consent: lead.consent ? '' : 'Please agree to be contacted' }))}
                 style={{ marginTop: '2px', width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span style={{ fontSize: '13px', color: '#374151', lineHeight: 1.5 }}>
@@ -471,7 +508,7 @@ export function LeadCapture({ answers, estimate, loadedAt, onSuccess, onBack }: 
 
           {/* Server error */}
           {serverError && (
-            <div style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '14px', color: '#dc2626' }}>
+            <div role="alert" style={{ padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '14px', color: '#dc2626' }}>
               {serverError}
             </div>
           )}

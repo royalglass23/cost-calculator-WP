@@ -287,7 +287,12 @@ function rg_submit_lead_to_rgtools(array $payload): array {
     $body   = json_decode(wp_remote_retrieve_body($response), true);
 
     if ($status < 200 || $status >= 300) {
-        error_log("RG Tools forward failed for {$submission_ref}: HTTP {$status} " . wp_remote_retrieve_body($response));
+        error_log(wp_json_encode([
+            'source' => 'rg-calculator',
+            'event' => 'forward_failed',
+            'submissionRef' => $submission_ref,
+            'status' => $status,
+        ]));
         return ['ok' => false, 'error' => "http_{$status}"];
     }
 

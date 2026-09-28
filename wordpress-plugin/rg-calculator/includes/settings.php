@@ -38,12 +38,20 @@ function rg_get_rgtools_target(): string {
 }
 
 function rg_get_rgtools_submit_url(): string {
+    if (defined('RGTOOLS_SUBMIT_URL') && RGTOOLS_SUBMIT_URL) {
+        return esc_url_raw((string) RGTOOLS_SUBMIT_URL);
+    }
+
     $targets = rg_rgtools_targets();
     $target = rg_get_rgtools_target();
     return esc_url_raw((string) $targets[$target]['submit_url']);
 }
 
 function rg_get_rgtools_pricing_url(): string {
+    if (defined('RGTOOLS_PRICING_URL') && RGTOOLS_PRICING_URL) {
+        return esc_url_raw((string) RGTOOLS_PRICING_URL);
+    }
+
     $targets = rg_rgtools_targets();
     $target = rg_get_rgtools_target();
     return esc_url_raw((string) $targets[$target]['pricing_url']);
