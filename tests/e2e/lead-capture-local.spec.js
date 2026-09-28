@@ -224,6 +224,60 @@ test('lead capture keeps the same submission reference when a failed submit is r
   expect(submissionRefs[1]).toBe(submissionRefs[0]);
 });
 
+test('lead contact fields explain errors when the customer leaves them', async ({ page }) => {
+  await page.route('**/wp-json/royal-glass/v1/pricing', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({}),
+  }));
+
+  await page.goto('/');
+  await page.getByText('Premium Pool Fence').first().click();
+  for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /Continue/i }).click();
+  await page.getByText('Spigot Round').first().click();
+  await page.getByRole('button', { name: /Continue/i }).click();
+  await page.getByText('Concrete').first().click();
+  await page.getByRole('button', { name: /Continue/i }).click();
+  await page.getByText('Chrome').first().click();
+  await page.getByRole('button', { name: /Continue/i }).click();
+
+  const name = page.getByPlaceholder(/Sarah Johnson|Smith Builders/i);
+  const email = page.getByPlaceholder(/sarah@example.com/i);
+  const phone = page.getByPlaceholder(/021 123 4567/i);
+  const address = page.getByLabel('Project address');
+
+  await name.focus();
+  await email.focus();
+  await expect(page.getByText('Name is required')).toBeVisible();
+  await email.fill('not-an-email');
+  await phone.focus();
+  await expect(page.getByText('Enter a valid email address')).toBeVisible();
+  await phone.fill('123');
+  await address.focus();
+  await expect(page.getByText('Enter a valid NZ phone number')).toBeVisible();
+  await address.blur();
+  await expect(page.getByText('Project address is required')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Homeowner' }).focus();
+  await page.getByRole('button', { name: 'ASAP' }).focus();
+  await expect(page.getByText('Choose the option that best describes you')).toBeVisible();
+  await address.focus();
+  await expect(page.getByText('Choose when you plan to start')).toBeVisible();
+  const contactConsent = page.getByLabel(/I agree Royal Glass may contact me/i);
+  await contactConsent.focus();
+  await contactConsent.blur();
+  await expect(page.getByText('Please agree to be contacted')).toBeVisible();
+
+  await name.fill('TEST ONLY Contact');
+  await email.fill('test@example.com');
+  await phone.fill('021 123 4567');
+  await address.fill('123 TEST ONLY Street, Auckland 1010');
+  await expect(page.getByText('Name is required')).toHaveCount(0);
+  await expect(page.getByText('Enter a valid email address')).toHaveCount(0);
+  await expect(page.getByText('Enter a valid NZ phone number')).toHaveCount(0);
+  await expect(page.getByText('Project address is required')).toHaveCount(0);
+});
+
 test('lead capture gets a fresh Turnstile token when retrying after a failed forward', async ({ page }) => {
   const submissionRefs = [];
   const turnstileTokens = [];

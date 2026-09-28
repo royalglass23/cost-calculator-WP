@@ -2,7 +2,7 @@
 
 A React/Vite single-page app delivered as a WordPress plugin shortcode. Customers complete a 9-step wizard describing their frameless glass balustrade or pool fence project, submit their contact details, and receive an instant indicative price range.
 
-Current version: **2.3.0**
+Local plugin candidate: **2.4.3**. Check the installed WordPress version separately before treating it as live.
 
 ---
 

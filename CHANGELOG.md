@@ -4,7 +4,15 @@ All notable changes, fixes, and decisions for this project from origin to curren
 
 ---
 
-## v2.3.1 — 2026-06-11 (current)
+## v2.4.3 — 2026-09-18 (local candidate; not deployed)
+
+- Validate name, email, phone, and project address as customers leave each field, while retaining submit-time validation for every required field.
+- Accept contact-conflict enquiries into rgtools for staff review and continue customer email and ServiceM8 handling. The review note is attached in rgtools.
+- Log forwarding failures with a submission reference without recording the raw upstream response.
+- Announce server errors to assistive technology and clear the message when email or phone is edited.
+- Rebuild the plugin assets and ZIP; bump the asset version to avoid stale browser caches.
+
+## v2.3.1 — 2026-06-11
 
 ### Bug fixes
 

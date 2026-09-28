@@ -3,7 +3,7 @@
  * Plugin Name: RG Cost Calculator
  * Plugin URI: https://royalglass.co.nz
  * Description: Frameless glass cost calculator with lead capture. Use shortcode [rg_calculator] on any page.
- * Version: 2.4.2
+ * Version: 2.4.3
  * Author: Royal Glass Limited
  * Text Domain: rg-calculator
  *
@@ -14,6 +14,8 @@
  *   define('RG_TURNSTILE_SITE_KEY','0x...');         // Cloudflare Turnstile site key
  *   define('RG_TURNSTILE_SECRET',  '0x...');         // Cloudflare Turnstile secret key
  *   define('RGTOOLS_SUBMIT_SECRET','same-secret-as-rgtools-vercel-env');
+ *   define('RGTOOLS_SUBMIT_URL',   'http://127.0.0.1:3000/api/lead-intake/calculator-submit'); // local testing only
+ *   define('RGTOOLS_PRICING_URL',  'http://127.0.0.1:3000/api/pricing'); // local testing only
  *   define('RG_LEAD_NOTIFY_EMAIL', 'support@royalglass.co.nz'); // optional override for lead/recovery notifications
  *   define('RG_SM8_INBOX_EMAIL',   'de9f86@inbox.servicem8.com'); // ServiceM8 inbox (comma-separate to add test address)
  *
@@ -22,7 +24,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('RG_CALC_VERSION',  '2.4.2');
+define('RG_CALC_VERSION',  '2.4.3');
 define('RG_CALC_DIR',       plugin_dir_path(__FILE__));
 define('RG_CALC_URL',       plugin_dir_url(__FILE__));
 
